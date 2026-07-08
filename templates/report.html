@@ -37,7 +37,8 @@
     /* ---- top bar ---- */
     .topbar { position:sticky; top:0; z-index:10; background:color-mix(in srgb, var(--page) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
     .topbar-in { max-width:760px; margin:0 auto; padding:0 20px; min-height:52px; display:flex; align-items:center; gap:14px; }
-    .wordmark { font-family:var(--mono); font-weight:800; font-size:15px; letter-spacing:.14em; }
+    .wordmark { font-family:var(--mono); font-weight:800; font-size:15px; letter-spacing:.14em; color:var(--ink); text-decoration:none; }
+    .wordmark:hover { color:var(--gold-text); }
     .wordmark .tilt { color:var(--gold); }
     .runmeta { font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted); }
     /* トップバーの計器類(mono英字)と同じ声にし、選択状態は金の下線1本で示す。
@@ -164,7 +165,7 @@
 <body>
   <div class="topbar">
     <div class="topbar-in">
-      <span class="wordmark">WINNO<span class="tilt">W̸</span></span>
+      <a class="wordmark" href="../index.html" title="アーカイブ一覧へ">WINNO<span class="tilt">W̸</span></a>
       <span class="runmeta" id="runmeta"></span>
       <!--__CONTENT_TABS__-->
       <span class="ownerChip" id="ownerChip">★ 0 / ✕ 0</span>
