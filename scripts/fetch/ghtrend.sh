@@ -30,6 +30,7 @@ awk '
     author: null,
     published_at: ((.[2] // "") | if . == "" then null else . end),
     engagement: {},
+    description: ((.[3] // "") | gsub("<[^>]*>"; "") | gsub("&[^;]+;"; "") | .[0:300]),
     raw_tags: []
   })
 '

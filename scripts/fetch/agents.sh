@@ -21,6 +21,7 @@ jq -r '.github_release_repos[]?' "$config" | while IFS= read -r repo; do
       author: (.author.login // null),
       published_at: (.published_at // .created_at // null),
       engagement: {},
+      notes: ((.body // "") | gsub("[\r\n]+"; " ") | .[0:1500]),
       raw_tags: ["github-release", $repo]
     })' | append_json
 done

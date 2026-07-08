@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS items (
   author TEXT,
   published_at TEXT,
   engagement_json TEXT,
+  raw_tags_json TEXT DEFAULT '[]',
   source_count INTEGER DEFAULT 1,
   topics_json TEXT,
   summary TEXT,
@@ -48,6 +49,8 @@ CREATE TABLE IF NOT EXISTS feedback_events (
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_item ON feedback_events(item_id, decided_at);
 `);
+  const columns = db.prepare('PRAGMA table_info(items)').all().map((column) => column.name);
+  if (!columns.includes('raw_tags_json')) db.exec("ALTER TABLE items ADD COLUMN raw_tags_json TEXT DEFAULT '[]'");
 }
 
 function normalizeUrl(input) {
@@ -82,6 +85,14 @@ function parseJsonArray(value) {
   } catch {
     return [];
   }
+}
+
+function normalizedTags(value) {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function mergeTags(existing, next) {
+  return [...new Set([...parseJsonArray(existing), ...normalizedTags(next)])];
 }
 
 function decodeHtmlEntities(value) {
@@ -209,13 +220,14 @@ function commandIngest(files) {
   let created = 0;
   const select = db.prepare('SELECT * FROM items WHERE id = ?');
   const insert = db.prepare(`INSERT INTO items
-    (id, url, title, source, author, published_at, engagement_json, source_count, first_seen_run)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    (id, url, title, source, author, published_at, engagement_json, raw_tags_json, source_count, first_seen_run)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const update = db.prepare(`UPDATE items SET
     title = COALESCE(title, ?),
     author = COALESCE(author, ?),
     published_at = COALESCE(published_at, ?),
     engagement_json = ?,
+    raw_tags_json = ?,
     source_count = ?
     WHERE id = ?`);
 
@@ -235,11 +247,12 @@ function commandIngest(files) {
         const existing = select.get(id);
         const nextEngagement = existing ? JSON.parse(existing.engagement_json || '{}') : {};
         nextEngagement[source] = item.engagement || {};
+        const nextTags = mergeTags(existing?.raw_tags_json, item.raw_tags);
         const sourceCount = Object.keys(nextEngagement).length;
         if (existing) {
-          update.run(title, decodedAuthor, publishedAt, JSON.stringify(nextEngagement), sourceCount, id);
+          update.run(title, decodedAuthor, publishedAt, JSON.stringify(nextEngagement), JSON.stringify(nextTags), sourceCount, id);
         } else {
-          insert.run(id, normalized, title, source, decodedAuthor, publishedAt, JSON.stringify(nextEngagement), sourceCount, runId);
+          insert.run(id, normalized, title, source, decodedAuthor, publishedAt, JSON.stringify(nextEngagement), JSON.stringify(nextTags), sourceCount, runId);
           created += 1;
         }
         ingested += 1;
@@ -254,8 +267,9 @@ function commandCandidates(args) {
   if (idx === -1 || !args[idx + 1]) throw new Error('usage: ingest.mjs candidates --run <id>');
   const runId = Number(args[idx + 1]);
   const rows = db.prepare('SELECT * FROM items WHERE last_shown_run IS NULL ORDER BY published_at DESC, title ASC').all();
+  const storyRows = rows.filter((row) => !parseJsonArray(row.raw_tags_json).includes('github-release'));
   const bySource = new Map();
-  for (const row of rows) {
+  for (const row of storyRows) {
     if (!bySource.has(row.source)) bySource.set(row.source, []);
     bySource.get(row.source).push(row);
   }
@@ -271,7 +285,7 @@ function commandCandidates(args) {
     sorted.forEach((row, index) => percentiles.set(row.id, Math.round((index / denom) * 100)));
   }
   const learned = deriveLearnedProfile();
-  const candidates = rows.map((row) => {
+  const candidates = storyRows.map((row) => {
     const engagementMap = JSON.parse(row.engagement_json || '{}');
     return {
       id: row.id,
@@ -282,7 +296,7 @@ function commandCandidates(args) {
       engagement: engagementMap[row.source] || {},
       source_count: row.source_count,
       quality_score: percentiles.get(row.id) ?? 50,
-      raw_tags: []
+      raw_tags: parseJsonArray(row.raw_tags_json)
     };
   });
   console.log(JSON.stringify({ run_id: runId, candidates, learned_profile: learned }, null, 2));

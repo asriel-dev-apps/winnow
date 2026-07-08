@@ -30,11 +30,17 @@ function readEntries() {
       if (!existsSync(storiesPath)) return null;
       const data = JSON.parse(readFileSync(storiesPath, 'utf8'));
       const stories = Array.isArray(data.stories) ? data.stories : [];
+      const releaseWatch = Array.isArray(data.release_watch) ? data.release_watch : [];
+      const ossRanking = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
       return {
         date: String(data.date || entry.name),
         story_count: stories.length,
         serendipity_count: stories.filter((story) => story.is_serendipity).length,
         macro_summary: firstMacroLine(data.macro_summary),
+        watch_terms: [
+          ...releaseWatch.flatMap((watch) => [watch.repo, ...(Array.isArray(watch.releases) ? watch.releases.map((release) => release.tag) : [])]),
+          ...ossRanking.map((ranking) => ranking.repo)
+        ].map((value) => String(value || '')).filter(Boolean),
         stories: stories.map((story) => ({
           translated_title: String(story.translated_title || ''),
           topics: Array.isArray(story.topics) ? story.topics.map(String) : []
@@ -159,7 +165,7 @@ const html = `<!doctype html>
       return [story.translated_title, ...(story.topics || [])].join(' ').toLowerCase();
     }
     function reportText(report) {
-      return [report.date, report.macro_summary, ...(report.stories || []).map(storyText)].join(' ').toLowerCase();
+      return [report.date, report.macro_summary, ...(report.watch_terms || []), ...(report.stories || []).map(storyText)].join(' ').toLowerCase();
     }
     function storyMatches(story, queryTerms) {
       const text = storyText(story);

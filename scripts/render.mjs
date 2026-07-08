@@ -55,6 +55,13 @@ function sourceCounts() {
     .concat(Object.entries(counts).filter(([s]) => !KNOWN_SOURCES.includes(s)));
 }
 
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toLocaleDateString('ja-JP');
+}
+
 function renderStaticHeader() {
   const counts = sourceCounts();
   let grainIndex = 0;
@@ -104,12 +111,40 @@ function storyHtml(story) {
       </article>`;
 }
 
+function releaseWatchHtml() {
+  const entries = Array.isArray(data.release_watch) ? data.release_watch : [];
+  if (!entries.length) return '';
+  return `<section class="watchSection">
+    <p class="eyebrow">RELEASE WATCH</p>
+    <div class="watchCards">${entries.map((entry) => {
+      const releases = Array.isArray(entry.releases) ? entry.releases : [];
+      return `<article class="watchCard">
+        <h3 class="watchRepo">${esc(entry.repo)}</h3>
+        <ul class="watchList">${releases.map((release) => `<li><a href="${esc(release.url)}" rel="noreferrer">${esc(release.tag)}</a>${release.published_at ? ` <span class="watchDate">${esc(formatDate(release.published_at))}</span>` : ''}${release.notes_summary ? `<p>${esc(release.notes_summary)}</p>` : ''}</li>`).join('')}</ul>
+      </article>`;
+    }).join('')}</div>
+  </section>`;
+}
+
+function ossRankingHtml() {
+  const entries = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
+  if (!entries.length) return '';
+  return `<section class="watchSection">
+    <p class="eyebrow">OSS RANKING</p>
+    <ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" rel="noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>
+  </section>`;
+}
+
+function watchSectionsHtml() {
+  return releaseWatchHtml() + ossRankingHtml();
+}
+
 function renderStaticDocument() {
   const fetchList = (data.fetch_status || [])
     .map((s) => `<li><span class="${s.ok ? 'ok' : 'ng'}">${s.ok ? 'OK' : 'NG'}</span><span>${esc(String(s.source).toUpperCase())}</span><span>${esc(s.count ?? 0)}件</span>${s.note ? `<span class="muted">${esc(s.note)}</span>` : ''}</li>`)
     .join('');
   const fetch = `<div class="fetchwrap"><p class="eyebrow">FETCH STATUS</p><ul class="fetch">${fetchList}</ul></div>`;
-  return (data.stories || []).map((story) => storyHtml(story)).join('') + fetch;
+  return (data.stories || []).map((story) => storyHtml(story)).join('') + watchSectionsHtml() + fetch;
 }
 
 let md = `# Winnow ${data.date || ''}\n\n`;
@@ -132,6 +167,25 @@ for (const story of data.stories || []) {
   if (sections.did_you_know) md += `#### Did you know?\n\n${line(sections.did_you_know)}\n\n`;
   md += `関連リンク:\n`;
   for (const item of story.items || []) md += `- [${line(item.title)}](${item.url}) (${item.source})\n`;
+  md += `\n`;
+}
+if (Array.isArray(data.release_watch) && data.release_watch.length) {
+  md += `## RELEASE WATCH\n\n`;
+  for (const entry of data.release_watch) {
+    md += `### ${line(entry.repo)}\n\n`;
+    for (const release of entry.releases || []) {
+      const date = release.published_at ? ` / ${line(formatDate(release.published_at))}` : '';
+      const notes = release.notes_summary ? ` — ${line(release.notes_summary)}` : '';
+      md += `- [${line(release.tag)}](${release.url})${date}${notes}\n`;
+    }
+    md += `\n`;
+  }
+}
+if (Array.isArray(data.oss_ranking) && data.oss_ranking.length) {
+  md += `## OSS RANKING\n\n`;
+  for (const entry of data.oss_ranking) {
+    md += `${entry.rank}. [${line(entry.repo)}](${entry.url})${entry.note ? ` — ${line(entry.note)}` : ''}\n`;
+  }
   md += `\n`;
 }
 md += `## 取得状況\n\n`;

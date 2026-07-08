@@ -96,6 +96,21 @@
     .links .from { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted); }
     .muted { color:var(--muted); }
 
+    /* ---- watch sections ---- */
+    .watchSection { margin:30px 0; padding-top:18px; border-top:1px solid var(--line); }
+    .watchCards { margin-top:10px; display:grid; gap:12px; }
+    .watchCard { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px 12px; box-shadow:0 1px 2px var(--ring); }
+    .watchRepo { margin:0 0 8px; font-family:var(--mono); font-size:13px; line-height:1.5; letter-spacing:.04em; }
+    .watchList, .rankingList { margin:8px 0 0; padding-left:22px; }
+    .watchList li, .rankingList li { padding:4px 0; border-bottom:1px dashed var(--line); }
+    .watchList li:last-child, .rankingList li:last-child { border-bottom:0; }
+    .watchList a, .rankingList a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+    .watchList a:hover, .rankingList a:hover { text-decoration-color:var(--gold); }
+    .watchDate { margin-left:8px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); }
+    .watchList p { margin:2px 0 4px; color:var(--ink-2); font-size:14px; line-height:1.7; }
+    .rankingList { font-family:var(--mono); font-size:13px; }
+    .rankNote { font-family:var(--sans); color:var(--ink-2); }
+
     /* ---- owner actions ---- */
     .storyActions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
     .actionBtn { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; min-width:44px; padding:0 13px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink-2); font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; }

@@ -2,6 +2,7 @@
   "zenn_topics": ["claudecode", "llm", "ai", "cloudflare", "hono", "flutter", "backend"],
   "subreddits": ["programming", "FlutterDev", "ClaudeAI"],
   "focus_keywords": ["Claude Code", "MCP", "coding agent", "Hono", "Cloudflare Workers", "edge computing"],
+  "ranking_keywords": ["skill", "agent", "claude", "codex", "mcp", "copilot", "llm"],
   "github_release_repos": ["anthropics/claude-code", "openai/codex"],
   "github_commit_feeds": ["hesreallyhim/awesome-claude-code"],
   "qiita_query": "stocks:>5",

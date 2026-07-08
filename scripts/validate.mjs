@@ -9,6 +9,10 @@ function violation(rule, message, clusterId) {
   return clusterId ? { rule, cluster_id: clusterId, message } : { rule, message };
 }
 
+function nonEmpty(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 try {
   const file = process.argv[2];
   if (!file) throw new Error('usage: validate.mjs <stories.json>');
@@ -34,6 +38,39 @@ try {
       }
     }
     if (!story.is_serendipity && Number(story.composite_score) < 55) errors.push(violation('composite_score', 'normal story composite_score must be >= 55', cid));
+  }
+  if (Object.hasOwn(data, 'release_watch')) {
+    if (!Array.isArray(data.release_watch)) {
+      errors.push(violation('release_watch', 'release_watch must be an array'));
+    } else {
+      const repos = new Set();
+      for (const entry of data.release_watch) {
+        const repo = entry?.repo;
+        if (!nonEmpty(repo)) errors.push(violation('release_watch', 'release_watch entry repo must be non-empty'));
+        else if (repos.has(repo)) errors.push(violation('release_watch', `release_watch repo must be unique: ${repo}`));
+        else repos.add(repo);
+        if (!Array.isArray(entry?.releases) || entry.releases.length === 0) {
+          errors.push(violation('release_watch', `release_watch ${repo || '(missing repo)'} must have at least one release`));
+        } else {
+          for (const release of entry.releases) {
+            if (!nonEmpty(release?.tag)) errors.push(violation('release_watch', `release_watch ${repo || '(missing repo)'} release tag must be non-empty`));
+            if (!nonEmpty(release?.url)) errors.push(violation('release_watch', `release_watch ${repo || '(missing repo)'} release url must be non-empty`));
+          }
+        }
+      }
+    }
+  }
+  if (Object.hasOwn(data, 'oss_ranking')) {
+    if (!Array.isArray(data.oss_ranking)) {
+      errors.push(violation('oss_ranking', 'oss_ranking must be an array'));
+    } else {
+      if (data.oss_ranking.length > 10) errors.push(violation('oss_ranking', 'oss_ranking must have at most 10 entries'));
+      data.oss_ranking.forEach((entry, index) => {
+        if (Number(entry?.rank) !== index + 1) errors.push(violation('oss_ranking', 'oss_ranking rank must be sequential from 1'));
+        if (!nonEmpty(entry?.repo)) errors.push(violation('oss_ranking', 'oss_ranking entry repo must be non-empty'));
+        if (!nonEmpty(entry?.url)) errors.push(violation('oss_ranking', 'oss_ranking entry url must be non-empty'));
+      });
+    }
   }
   console.log(JSON.stringify(errors, null, 2));
   process.exit(errors.length === 0 ? 0 : 1);
