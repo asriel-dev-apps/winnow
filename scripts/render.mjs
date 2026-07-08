@@ -114,7 +114,7 @@ function storyHtml(story) {
 function releaseWatchHtml() {
   const entries = Array.isArray(data.release_watch) ? data.release_watch : [];
   if (!entries.length) return '';
-  return `<section class="watchSection">
+  return `<section class="watchSection" id="releaseView">
     <p class="eyebrow">RELEASE WATCH</p>
     <div class="watchCards">${entries.map((entry) => {
       const releases = Array.isArray(entry.releases) ? entry.releases : [];
@@ -129,7 +129,7 @@ function releaseWatchHtml() {
 function ossRankingHtml() {
   const entries = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
   if (!entries.length) return '';
-  return `<section class="watchSection">
+  return `<section class="watchSection" id="rankingView">
     <p class="eyebrow">OSS RANKING</p>
     <ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" rel="noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>
   </section>`;
@@ -137,6 +137,17 @@ function ossRankingHtml() {
 
 function watchSectionsHtml() {
   return releaseWatchHtml() + ossRankingHtml();
+}
+
+function renderContentTabs() {
+  const hasReleaseWatch = Array.isArray(data.release_watch) && data.release_watch.length;
+  const hasOssRanking = Array.isArray(data.oss_ranking) && data.oss_ranking.length;
+  if (!hasReleaseWatch && !hasOssRanking) return '';
+  return `<div class="contentTabs" id="contentTabs" role="tablist" aria-label="Report sections">
+        <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">サーベイ</button>
+        ${hasReleaseWatch ? '<button class="contentTab" type="button" role="tab" data-tab="releases" aria-selected="false">リリース</button>' : ''}
+        ${hasOssRanking ? '<button class="contentTab" type="button" role="tab" data-tab="ranking" aria-selected="false">ランキング</button>' : ''}
+      </div>`;
 }
 
 function renderStaticDocument() {
@@ -200,6 +211,7 @@ const apiBase = Object.hasOwn(process.env, 'WINNOW_API_BASE') ? process.env.WINN
 const payload = { ...data, apiBase };
 const html = template
   .replace('<!--__STATIC_HEADER__-->', renderStaticHeader())
+  .replace('<!--__CONTENT_TABS__-->', renderContentTabs())
   .replace('<!--__STATIC_DOCUMENT__-->', renderStaticDocument())
   .replace('/*__WINNOW_DATA__*/', JSON.stringify(payload).replace(/</g, '\\u003c'));
 writeFileSync(join(outDir, 'report.html'), html);

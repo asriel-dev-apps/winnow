@@ -38,6 +38,11 @@
     .wordmark { font-family:var(--mono); font-weight:800; font-size:15px; letter-spacing:.14em; }
     .wordmark .tilt { color:var(--gold); }
     .runmeta { font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted); }
+    .contentTabs { display:none; align-items:center; gap:3px; margin-left:auto; padding:3px; border:1px solid var(--line); border-radius:10px; background:var(--card); box-shadow:0 1px 2px var(--ring); }
+    .js .contentTabs.is-visible { display:flex; }
+    .contentTab { appearance:none; min-height:44px; min-width:44px; padding:0 13px; border:0; border-radius:7px; background:transparent; color:var(--ink-2); font-family:var(--sans); font-size:13.5px; font-weight:800; cursor:pointer; }
+    .contentTab:hover { color:var(--ink); }
+    .contentTab[aria-selected="true"] { background:var(--ink); color:var(--page); }
     .ownerChip { display:none; margin-left:auto; border:1px solid var(--line); border-radius:999px; padding:2px 9px; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--ink-2); background:var(--card); white-space:nowrap; }
     .owner-mode .ownerChip { display:inline-flex; }
 
@@ -128,12 +133,16 @@
     .authLink { display:none; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--muted); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
     .authLink:hover { color:var(--ink-2); text-decoration-color:var(--gold); }
     .authLink.is-visible { display:inline-flex; }
+    .content-hidden { display:none; }
 
     @media (max-width:520px) {
       body { font-size:15px; }
       .story { padding:18px 16px 12px; border-radius:12px; }
       .story.is-fav { padding-left:14px; }
+      .topbar-in { flex-wrap:wrap; }
       .runmeta { display:none; }
+      .contentTabs { order:3; flex:1 0 100%; margin-left:0; }
+      .contentTab { flex:1 1 0; padding:0 8px; }
       .ownerChip { margin-left:auto; font-size:10.5px; }
       .actionBtn { flex:1 1 160px; }
     }
@@ -144,6 +153,7 @@
     <div class="topbar-in">
       <span class="wordmark">WINNO<span class="tilt">W̸</span></span>
       <span class="runmeta" id="runmeta"></span>
+      <!--__CONTENT_TABS__-->
       <span class="ownerChip" id="ownerChip">★ 0 / ✕ 0</span>
     </div>
   </div>
@@ -163,6 +173,61 @@
     const apiBase = location.protocol === 'file:' ? (data.apiBase || '') : '';
 
     document.getElementById('runmeta').textContent = `${data.date || ''} · RUN ${data.run_id ?? ''} · ${(data.stories || []).length} STORIES`;
+
+    function initContentTabs() {
+      const tabs = document.getElementById('contentTabs');
+      const buttons = tabs ? [...tabs.querySelectorAll('[data-tab]')] : [];
+      const hero = document.querySelector('.hero');
+      const stories = [...document.querySelectorAll('article.story')];
+      const fetchwrap = document.querySelector('.fetchwrap');
+      const views = {
+        survey: [hero, ...stories, fetchwrap].filter(Boolean),
+        releases: [document.getElementById('releaseView')].filter(Boolean),
+        ranking: [document.getElementById('rankingView')].filter(Boolean),
+      };
+      const available = new Set(['survey']);
+      if (views.releases.length) available.add('releases');
+      if (views.ranking.length) available.add('ranking');
+      for (const button of buttons) {
+        if (!available.has(button.dataset.tab)) button.hidden = true;
+      }
+      if (tabs && available.size > 1) tabs.classList.add('is-visible');
+
+      function routeFromHash() {
+        if (location.hash === '#releases') return available.has('releases') ? 'releases' : 'survey';
+        if (location.hash === '#ranking') return available.has('ranking') ? 'ranking' : 'survey';
+        return 'survey';
+      }
+      function setVisible(view, shouldScroll) {
+        for (const [name, elements] of Object.entries(views)) {
+          const hidden = name !== view;
+          for (const element of elements) element.classList.toggle('content-hidden', hidden);
+        }
+        for (const button of buttons) {
+          button.setAttribute('aria-selected', String(button.dataset.tab === view));
+        }
+        if (shouldScroll) window.scrollTo({ top: 0 });
+      }
+      function selectTab(view, shouldScroll = true) {
+        const next = available.has(view) ? view : 'survey';
+        if (next === 'survey') {
+          if (location.hash) history.pushState('', document.title, location.pathname + location.search);
+          setVisible('survey', shouldScroll);
+          return;
+        }
+        const hash = next === 'releases' ? '#releases' : '#ranking';
+        if (location.hash === hash) setVisible(next, shouldScroll);
+        else location.hash = hash;
+      }
+
+      for (const button of buttons) {
+        button.addEventListener('click', () => selectTab(button.dataset.tab));
+      }
+      window.addEventListener('hashchange', () => setVisible(routeFromHash(), true));
+      setVisible(routeFromHash(), false);
+    }
+
+    initContentTabs();
 
     function setAuthLink(mode) {
       const link = document.getElementById('authLink');
