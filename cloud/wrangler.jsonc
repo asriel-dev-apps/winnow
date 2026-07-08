@@ -1,0 +1,8 @@
+{
+  "name": "winnow",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "assets": { "directory": "../output" },
+  "d1_databases": [{ "binding": "DB", "database_name": "winnow", "database_id": "04db556e-9f3b-4d11-8939-a6e6165b3e71" }],
+  "observability": { "enabled": true }
+}

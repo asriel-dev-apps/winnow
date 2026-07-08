@@ -1,0 +1,55 @@
+{
+  "run_id": 0,
+  "date": "2026-07-07",
+  "generated_at": "2026-07-07T03:00:00.000Z",
+  "macro_summary": [
+    "coding agentの実行基盤と観測性が主要テーマでした。",
+    "MCPと永続状態の設計が複数ソースで重なっています。",
+    "Cloudflare D1やRust TUIなど実装寄りの記事が候補に残りました。"
+  ],
+  "stories": [
+    {
+      "cluster_id": "s01",
+      "translated_title": "coding agent実行基盤、MCP観測性まで実装論が具体化",
+      "match_score": 86,
+      "quality_score": 90,
+      "composite_score": 87,
+      "is_serendipity": false,
+      "topics": ["coding agent", "mcp", "observability"],
+      "summary": "coding agentの実行基盤をどう分割するかが具体的に議論されています。MCPサーバーの観測性まで含めて、運用時に必要な境界が見えます。",
+      "selection_reason": "重点領域のcoding agentとMCPに直接関係し、複数ソースで重複観測されたため。",
+      "sections": {
+        "discussion": "HNでは実行ログの粒度と安全なツール権限が主な論点でした。",
+        "perspectives": "小さなプロセス分割はデバッグしやすい一方、状態共有と権限設計が複雑になります。",
+        "quick_questions": [
+          {"q": "MCPの観測性で最初に見るべきものは何ですか。", "a": "ツール呼び出し、失敗理由、入力サイズ、レイテンシです。"},
+          {"q": "ローカル実行とリモート実行の差は何ですか。", "a": "権限境界と永続化の責任が大きく変わります。"}
+        ],
+        "did_you_know": "MCPはツール提供側と利用側の境界を明示するため、監査ログとの相性が良い設計です。"
+      },
+      "items": [
+        {"id": "ITEM_AGENT_RUNTIME", "url": "https://example.com/agent-runtime?a=1&b=2", "title": "A practical runtime for coding agents", "source": "hn", "engagement": {"points": 120, "comments": 34, "hn_object_id": "1001"}, "published_at": "2026-07-07T00:00:00Z"},
+        {"id": "ITEM_MCP_OBSERVABILITY", "url": "https://example.com/mcp-observability", "title": "Observability patterns for MCP servers", "source": "hn", "engagement": {"points": 80, "comments": 12, "hn_object_id": "1002"}, "published_at": "2026-07-06T13:00:00Z"}
+      ]
+    },
+    {
+      "cluster_id": "s02",
+      "translated_title": "Cloudflare D1でagent状態を扱う実装パターン",
+      "match_score": 78,
+      "quality_score": 65,
+      "composite_score": 74,
+      "is_serendipity": false,
+      "topics": ["cloudflare", "d1", "agent state"],
+      "summary": "Cloudflare D1を使ってagentの状態を保存する構成が紹介されています。軽量なSQLite互換ストアを前提に、ローカルからWorkersへの移行もしやすくなります。",
+      "selection_reason": "Cloudflare Workers / D1の関心領域とagent状態管理が交差するため。",
+      "sections": {},
+      "items": [
+        {"id": "ITEM_D1", "url": "https://example.com/cloudflare-d1-agents", "title": "Cloudflare D1でagentの状態を扱う", "source": "zenn", "engagement": {}, "published_at": "2026-07-06T10:00:00Z"}
+      ]
+    }
+  ],
+  "fetch_status": [
+    {"source": "hn", "ok": true, "count": 3, "note": "fixture"},
+    {"source": "zenn", "ok": true, "count": 3, "note": "fixture"}
+  ]
+}

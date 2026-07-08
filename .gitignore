@@ -1,0 +1,9 @@
+data/
+output/
+node_modules/
+.wrangler/
+.claude/settings.local.json
+tmp/
+/tmp/
+*.tmp
+*.log

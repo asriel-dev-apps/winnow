@@ -1,0 +1,12 @@
+focus:   # 重点領域（常に高スコア）
+  - coding agentツール全般（Claude Code skills / hooks / MCP / subagent / エージェントハーネス）
+  - Hono（フレームワーク設計・ミドルウェア・RPC・エコシステム）
+  - Cloudflareのアーキテクチャと原理原則（Workers / V8 isolatesの仕組み / D1 / Durable Objects / エッジコンピューティング）
+interests:
+  - バックエンド設計全般（API設計・認証・DB・モバイルアプリのバックエンド）
+  - Flutter / Dart のモバイルアプリ開発
+  - エッジ実行環境・ランタイムの内部実装（V8 / Wasm / isolate分離モデル）
+  - LLMアプリケーション設計・課金・計測
+exclude:
+  - 暗号通貨の相場記事
+  - 採用・転職系ポエム

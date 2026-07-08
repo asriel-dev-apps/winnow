@@ -1,0 +1,29 @@
+[
+  {
+    "source": "hn",
+    "url": "https://example.com/agent-runtime?utm_source=hn&b=2&a=1#comments",
+    "title": "A practical runtime for coding agents",
+    "author": "pg",
+    "published_at": "2026-07-07T00:00:00Z",
+    "engagement": {"points": 120, "comments": 34, "hn_object_id": "1001"},
+    "raw_tags": ["front_page"]
+  },
+  {
+    "source": "hn",
+    "url": "https://example.com/mcp-observability/",
+    "title": "Observability patterns for MCP servers",
+    "author": "alice",
+    "published_at": "2026-07-06T13:00:00Z",
+    "engagement": {"points": 80, "comments": 12, "hn_object_id": "1002"},
+    "raw_tags": ["story"]
+  },
+  {
+    "source": "hn",
+    "url": "https://example.com/durable-agent-state",
+    "title": "Durable state for long running agents",
+    "author": "bob",
+    "published_at": "2026-07-06T11:00:00Z",
+    "engagement": {"points": 40, "comments": 5, "hn_object_id": "1003"},
+    "raw_tags": ["story"]
+  }
+]
