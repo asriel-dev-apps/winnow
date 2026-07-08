@@ -144,9 +144,9 @@ function renderContentTabs() {
   const hasOssRanking = Array.isArray(data.oss_ranking) && data.oss_ranking.length;
   if (!hasReleaseWatch && !hasOssRanking) return '';
   return `<div class="contentTabs" id="contentTabs" role="tablist" aria-label="Report sections">
-        <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">サーベイ</button>
-        ${hasReleaseWatch ? '<button class="contentTab" type="button" role="tab" data-tab="releases" aria-selected="false">リリース</button>' : ''}
-        ${hasOssRanking ? '<button class="contentTab" type="button" role="tab" data-tab="ranking" aria-selected="false">ランキング</button>' : ''}
+        <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">SURVEY</button>
+        ${hasReleaseWatch ? '<button class="contentTab" type="button" role="tab" data-tab="releases" aria-selected="false">RELEASES</button>' : ''}
+        ${hasOssRanking ? '<button class="contentTab" type="button" role="tab" data-tab="ranking" aria-selected="false">RANKING</button>' : ''}
       </div>`;
 }
 
