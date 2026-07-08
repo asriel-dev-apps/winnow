@@ -121,8 +121,10 @@
     /* ---- owner actions ---- */
     /* スワイプジェスチャー(オーナー・タッチのみ)。touch-action:pan-yで縦スクロールはブラウザに委ね、
        横方向の動きだけをJSで拾う */
-    .owner-mode article.story { touch-action:pan-y; position:relative; transition:transform .18s ease; }
+    .owner-mode article.story { touch-action:pan-y; position:relative; transition:transform .22s cubic-bezier(.2,.7,.3,1.1), box-shadow .2s; }
     article.story.swiping { transition:none; user-select:none; }
+    article.story.press-lock { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    article.story.lifted { box-shadow:0 10px 28px var(--ring), 0 1px 2px var(--ring); z-index:3; }
     .swipeHint { position:absolute; top:14px; font-family:var(--mono); font-weight:800; font-size:12px; letter-spacing:.12em; padding:4px 10px; border-radius:8px; opacity:0; pointer-events:none; z-index:2; }
     .swipeHint.fav { right:14px; color:var(--gold-text); border:2px solid var(--gold); background:var(--gold-wash); }
     .swipeHint.no { left:14px; color:var(--ink-2); border:2px solid var(--muted); background:var(--page); }
@@ -333,41 +335,54 @@
       hintNo.className = 'swipeHint no';
       hintNo.textContent = '✕ PASS';
       article.append(hintFav, hintNo);
-      let startX = 0, startY = 0, dx = 0, active = false, horizontal = false;
+      // 長押し(350ms)が唯一の入口。長押しなしの横移動には一切反応しない=スクロールと非干渉
+      let startX = 0, startY = 0, dx = 0, pending = false, lifted = false, timer = 0;
+      const cancelPending = () => { pending = false; clearTimeout(timer); article.classList.remove('press-lock'); };
       article.addEventListener('pointerdown', ev => {
-        if (ev.pointerType !== 'touch') return;
+        if (ev.pointerType !== 'touch' || lifted) return;
         if (ev.target.closest('a, button, summary')) return;
-        startX = ev.clientX; startY = ev.clientY; dx = 0; active = true; horizontal = false;
+        startX = ev.clientX; startY = ev.clientY; dx = 0; pending = true;
+        article.classList.add('press-lock');
+        const pid = ev.pointerId;
+        timer = setTimeout(() => {
+          if (!pending) return;
+          pending = false;
+          lifted = true;
+          article.classList.add('swiping', 'lifted');
+          try { article.setPointerCapture(pid); } catch {}
+          if (navigator.vibrate) navigator.vibrate(15);
+          article.style.transform = 'translateX(0) scale(1.015)';
+        }, 350);
       });
       article.addEventListener('pointermove', ev => {
-        if (!active || ev.pointerType !== 'touch') return;
-        dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (!horizontal) {
-          // 横意図が明確になるまで何もしない。縦意図ならブラウザのスクロールに譲る
-          if (Math.abs(dx) > 28 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-            horizontal = true;
-            article.classList.add('swiping');
-            try { article.setPointerCapture(ev.pointerId); } catch {}
-          } else if (Math.abs(dy) > 14) { active = false; return; }
-          else return;
+        if (ev.pointerType !== 'touch') return;
+        if (pending) {
+          // 持ち上げ前に動いたら普通のスクロール/タップ
+          if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) cancelPending();
+          return;
         }
-        const shift = Math.max(Math.min(dx * 0.45, 120), -120);
-        article.style.transform = `translateX(${shift}px)`;
-        hintFav.style.opacity = Math.min(Math.max(dx - 40, 0) / 100, 1);
-        hintNo.style.opacity = Math.min(Math.max(-dx - 40, 0) / 100, 1);
+        if (!lifted) return;
+        dx = ev.clientX - startX;
+        const abs = Math.abs(dx);
+        const eased = abs <= 160 ? dx : Math.sign(dx) * (160 + (abs - 160) * 0.25);
+        article.style.transform = `translateX(${eased}px) scale(1.015)`;
+        hintFav.style.opacity = Math.min(Math.max(dx - 20, 0) / 80, 1);
+        hintNo.style.opacity = Math.min(Math.max(-dx - 20, 0) / 80, 1);
       });
+      // 持ち上げ中はブラウザのスクロール開始を止める(passive:falseが必須)
+      article.addEventListener('touchmove', ev => { if (lifted) ev.preventDefault(); }, { passive: false });
+      article.addEventListener('contextmenu', ev => { if (pending || lifted) ev.preventDefault(); });
       const finish = () => {
-        if (!active) return;
-        active = false;
-        if (!horizontal) return;
-        horizontal = false;
-        article.classList.remove('swiping');
+        cancelPending();
+        if (!lifted) return;
+        lifted = false;
+        article.classList.remove('swiping', 'lifted');
         article.style.transform = '';
         hintFav.style.opacity = 0;
         hintNo.style.opacity = 0;
-        if (dx > 110) setStoryVerdict(article, story, 'favorite');
-        else if (dx < -110) setStoryVerdict(article, story, 'not_interested');
+        if (dx > 100) setStoryVerdict(article, story, 'favorite');
+        else if (dx < -100) setStoryVerdict(article, story, 'not_interested');
+        dx = 0;
       };
       article.addEventListener('pointerup', finish);
       article.addEventListener('pointercancel', finish);
