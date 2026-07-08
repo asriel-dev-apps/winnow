@@ -26,7 +26,7 @@ ln -s "$PWD" ~/.claude/skills/winnow                # skillとして登録
 
 Claude Codeのセッションで `/winnow` を実行すると、収集からレポート生成・表示まで動きます。動作確認は `bash scripts/smoke.sh`。
 
-- 毎朝の自動実行: `bash scripts/install-launchd.sh`（解除は `--uninstall`）
+- 定期実行: `bash scripts/install-launchd.sh`（解除は `--uninstall`）
 - クラウド配信: `cloud/` で `wrangler d1 create winnow` → `wrangler d1 execute winnow --remote --file schema.sql` → `wrangler deploy` → `wrangler secret put WINNOW_KEY` を実行し、`data/cloud.json` に `{"url": "...", "key": "..."}` を置く。ブラウザから判定を記録するには `/login` からログイン
 
 ## ドキュメント
