@@ -15,6 +15,8 @@ type FeedbackPayload = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 const verdicts = new Set(['favorite', 'not_interested', 'skip', 'undo']);
+const cookieOptions = 'HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/';
+const clearCookieOptions = 'HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/';
 
 function cookieValue(header: string | undefined | null, name: string): string | null {
   if (!header) return null;
@@ -43,10 +45,52 @@ async function auth(c: Context<{ Bindings: Bindings }>, next: Next): Promise<Res
   if (validAuthKey(c, headerKey) || validAuthKey(c, cookieKey)) return next();
   if (validAuthKey(c, queryKey)) {
     await next();
-    c.header('Set-Cookie', `wk=${encodeURIComponent(queryKey)}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/`);
+    c.header('Set-Cookie', `wk=${encodeURIComponent(queryKey)}; ${cookieOptions}`);
     return;
   }
   return c.json({ error: 'unauthorized' }, 401);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function loginPage(error = ''): string {
+  const message = error ? `<p class="error">${error}</p>` : '';
+  return `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Winnow Login</title>
+  <style>
+    :root { color-scheme: light dark; --page:#f9f9f7; --card:#fcfcfb; --ink:#17181a; --ink-2:#52514e; --line:#e1e0d9; --gold:#c9920e; --gold-text:#7a5800; --gold-wash:rgba(201,146,14,.08); --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace; --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,-apple-system,"Segoe UI",sans-serif; }
+    @media (prefers-color-scheme: dark) { :root { --page:#0d0d0d; --card:#1a1a19; --ink:#f2f2ef; --ink-2:#c3c2b7; --line:#2c2c2a; --gold:#e3b341; --gold-text:#e3b341; --gold-wash:rgba(227,179,65,.09); } }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--page); color:var(--ink); font-family:var(--sans); }
+    main { width:min(420px,100%); }
+    .eyebrow { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--gold-text); }
+    h1 { margin:6px 0 18px; font-size:26px; line-height:1.35; }
+    form { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; }
+    label { display:block; margin-bottom:8px; font-size:13px; color:var(--ink-2); }
+    input { width:100%; min-height:46px; border:1px solid var(--line); border-radius:8px; padding:0 12px; background:var(--page); color:var(--ink); font:16px var(--sans); }
+    button { width:100%; min-height:46px; margin-top:14px; border:1px solid var(--gold); border-radius:8px; background:var(--gold-wash); color:var(--gold-text); font-weight:800; cursor:pointer; }
+    .error { margin:0 0 12px; color:#b42318; font-weight:700; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">WINNOW OWNER</div>
+    <h1>ログイン</h1>
+    <form method="post" action="/login">
+      ${message}
+      <label for="key">オーナーキー</label>
+      <input id="key" name="key" type="password" autocomplete="current-password" required autofocus>
+      <button type="submit">ログイン</button>
+    </form>
+  </main>
+</body>
+</html>`;
 }
 
 function validateFeedback(body: FeedbackPayload): { ok: true; runId: number; clusterId: string; itemIds: string[]; verdict: string } | { ok: false } {
@@ -61,10 +105,28 @@ app.use('/api/*', auth);
 
 app.get('/api/health', (c) => c.json({ ok: true, version: '0.2.0' }));
 
+app.get('/login', (c) => c.html(loginPage()));
+
+app.post('/login', async (c) => {
+  const form = await c.req.formData().catch(() => null);
+  const key = String(form?.get('key') || '');
+  if (validAuthKey(c, key)) {
+    c.header('Set-Cookie', `wk=${encodeURIComponent(key)}; ${cookieOptions}`);
+    return c.redirect('/', 302);
+  }
+  await sleep(1000);
+  return c.html(loginPage('キーが正しくありません。'), 401);
+});
+
+app.get('/logout', (c) => {
+  c.header('Set-Cookie', `wk=; ${clearCookieOptions}`);
+  return c.redirect('/', 302);
+});
+
 app.get('/auth', (c) => {
   const key = c.req.query('key');
   if (!validAuthKey(c, key)) return c.json({ error: 'unauthorized' }, 401);
-  c.header('Set-Cookie', `wk=${encodeURIComponent(key)}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/`);
+  c.header('Set-Cookie', `wk=${encodeURIComponent(key)}; ${cookieOptions}`);
   return c.redirect('/', 302);
 });
 
@@ -84,6 +146,37 @@ app.get('/api/feedback/summary', async (c) => {
     .prepare('SELECT run_id, verdict, COUNT(*) AS count FROM feedback_events GROUP BY run_id, verdict ORDER BY run_id, verdict')
     .all();
   return c.json({ ok: true, summary: results });
+});
+
+app.get('/api/feedback/state', async (c) => {
+  const runIdParam = c.req.query('run_id');
+  const runId = runIdParam == null || runIdParam === '' ? null : Number(runIdParam);
+  if (runId != null && !Number.isInteger(runId)) return c.json({ ok: false, error: 'invalid run_id' }, 400);
+  const query = runId == null
+    ? `SELECT e.item_id, e.verdict
+       FROM feedback_events e
+       WHERE e.verdict != 'undo'
+         AND NOT EXISTS (
+           SELECT 1 FROM feedback_events newer
+           WHERE newer.item_id = e.item_id
+             AND (newer.decided_at > e.decided_at OR (newer.decided_at = e.decided_at AND newer.id > e.id))
+         )
+       ORDER BY e.item_id`
+    : `SELECT e.item_id, e.verdict
+       FROM feedback_events e
+       WHERE e.run_id = ?
+         AND e.verdict != 'undo'
+         AND NOT EXISTS (
+           SELECT 1 FROM feedback_events newer
+           WHERE newer.item_id = e.item_id
+             AND newer.run_id = e.run_id
+             AND (newer.decided_at > e.decided_at OR (newer.decided_at = e.decided_at AND newer.id > e.id))
+         )
+       ORDER BY e.item_id`;
+  const statement = c.env.DB.prepare(query);
+  const { results } = runId == null ? await statement.all() : await statement.bind(runId).all();
+  const state = Object.fromEntries((results || []).map((row) => [String(row.item_id), row.verdict]));
+  return c.json({ ok: true, state });
 });
 
 app.get('/api/feedback/export', async (c) => {

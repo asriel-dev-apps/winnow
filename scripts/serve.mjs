@@ -103,6 +103,32 @@ function contentType(path) {
 
 const db = initDb();
 const insertFeedback = db.prepare('INSERT INTO feedback_events (item_id, cluster_id, verdict, decided_at, run_id) VALUES (?, ?, ?, ?, ?)');
+const feedbackStateAll = db.prepare(`
+SELECT e.item_id, e.verdict
+FROM feedback_events e
+WHERE e.verdict != 'undo'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM feedback_events newer
+    WHERE newer.item_id = e.item_id
+      AND (newer.decided_at > e.decided_at OR (newer.decided_at = e.decided_at AND newer.id > e.id))
+  )
+ORDER BY e.item_id
+`);
+const feedbackStateByRun = db.prepare(`
+SELECT e.item_id, e.verdict
+FROM feedback_events e
+WHERE e.run_id = ?
+  AND e.verdict != 'undo'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM feedback_events newer
+    WHERE newer.item_id = e.item_id
+      AND newer.run_id = e.run_id
+      AND (newer.decided_at > e.decided_at OR (newer.decided_at = e.decided_at AND newer.id > e.id))
+  )
+ORDER BY e.item_id
+`);
 let timer;
 function bumpTimer(server) {
   if (noTimeout) return;
@@ -119,6 +145,11 @@ function runTransaction(fn) {
     db.exec('ROLLBACK');
     throw error;
   }
+}
+
+function currentFeedbackState(runId) {
+  const rows = runId == null ? feedbackStateAll.all() : feedbackStateByRun.all(runId);
+  return Object.fromEntries(rows.map((row) => [row.item_id, row.verdict]));
 }
 
 if (await probeExisting()) {
@@ -155,6 +186,14 @@ const server = createServer(async (req, res) => {
           for (const itemId of body.item_ids) insertFeedback.run(String(itemId), String(body.cluster_id), body.verdict, decidedAt, Number(body.run_id));
         });
         json(res, 200, { ok: true, recorded: body.item_ids.length });
+      } else if (req.method === 'GET' && url.pathname === '/api/feedback/state') {
+        const runIdParam = url.searchParams.get('run_id');
+        const runId = runIdParam == null || runIdParam === '' ? null : Number(runIdParam);
+        if (runId != null && !Number.isInteger(runId)) {
+          json(res, 400, { ok: false, error: 'invalid run_id' });
+          return;
+        }
+        json(res, 200, { ok: true, state: currentFeedbackState(runId) });
       } else if (req.method === 'GET' && url.pathname === '/api/feedback/summary') {
         const rows = db.prepare('SELECT run_id, verdict, COUNT(*) AS count FROM feedback_events GROUP BY run_id, verdict ORDER BY run_id, verdict').all();
         json(res, 200, { ok: true, summary: rows });

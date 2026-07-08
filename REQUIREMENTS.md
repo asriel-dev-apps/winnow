@@ -41,7 +41,8 @@
 | **M0** | オンデマンド実行。収集→選別→要約→Markdown+HTMLレポート生成。スワイプUIとSQLiteへのフィードバック**記録**まで | **実装済み**（2026-07-07） |
 | **M1** | フィードバック**学習**ループ（undo考慮の最新判定で学習プロファイル導出）+ セレンディピティ枠 | **実装済み**（2026-07-08） |
 | **M2** | 定期実行 + アーカイブ索引ページ（`scripts/index.mjs` → `output/index.html`）。方式は**launchdに決定**: `com.winnow.daily`（毎朝07:00に `scripts/daily.sh` → `claude -p "/winnow"` headless実行、macOS通知）+ `com.winnow.serve`（serve.mjs常駐）。scheduled agentsはクラウド実行のためローカルDB/outputに書けず不採用 | **実装済み**（2026-07-08） |
-| **M3** | Cloudflare配信（**ハイブリッド構成**: 生成はローカルのまま、配信+フィードバック収集をクラウドへ）。https://winnow.tt-dev.workers.dev — **閲覧はWorkers Static Assetsによる公開静的サイト**（`output/` をそのままデプロイ、HTMLのみ公開・stories.json/report.mdは`.assetsignore`で遮断）、`cloud/` のHono Workerは認証付きフィードバックAPI（D1）のみ担当。スワイプを記録するには `/auth?key=` を一度踏んでcookieを得る。`publish.mjs`=`wrangler deploy`、`sync-feedback.mjs` でクラウドの判定をローカルDBに還流 | **実装済み・デプロイ済み**（2026-07-08。当初のKV+認証付き配信から公開静的サイトに変更） |
+| **M3** | Cloudflare配信（**ハイブリッド構成**: 生成はローカルのまま、配信+フィードバック収集をクラウドへ）。https://winnow.tt-dev.workers.dev — **閲覧はWorkers Static Assetsによる公開静的サイト**（`output/` をそのままデプロイ、HTMLのみ公開・stories.json/report.mdは`.assetsignore`で遮断）、`cloud/` のHono Workerは認証付きフィードバックAPI（D1）のみ担当。`publish.mjs`=`wrangler deploy`、`sync-feedback.mjs` でクラウドの判定をローカルDBに還流 | **実装済み・デプロイ済み**（2026-07-08。当初のKV+認証付き配信から公開静的サイトに変更） |
+| **M4** | **フィードバックUIの統合とオーナー限定化**。2モード切替（読む/選り分ける）を廃止して単一ビュー+カード上のインラインアクション（★/✕）に統合。判定状態の永続表示と変更（§4.6）。`GET /api/feedback/state` 追加、Honoに `/login`・`/logout` のログイン導線を追加（オーナーのみ操作UIが表示される） | **実装済み**（2026-07-08） |
 
 フィードバックストアはSQLite（D1互換DDL）・受信はHTTP POSTで設計したため、M3はserve.mjsと同一コントラクトのWorker追加のみで成立した。item ID（§4.2のURL正規化仕様）は今後も不変とする。
 
@@ -137,13 +138,13 @@ exclude:
 1. **Markdown** `output/YYYY-MM-DD/report.md` — 引用・URL付きの一次成果物。アーカイブ・grep用
 2. **HTML** `output/YYYY-MM-DD/report.html` — テンプレート（`templates/report.html`）に stories.json を埋め込んだ**自己完結型1ファイル**（CSS/JSインライン。外部CDN・外部ホストへのアセット取得なし。通信はフィードバックAPI `http://127.0.0.1:<port>` への同一ホスト通信のみ。ライト/ダーク対応）
 
-HTMLは2モード切替:
-- **📖 ドキュメントモード**: 読み物としてのダイジェスト。セクション開閉式（Kagi News方式）。ソース内訳の帯グラフ、タグチップ
-- **🃏 トリアージモード**: カードスタックUI。1カード = 1ストーリー
-  - **右スワイプ = ⭐お気に入り / 左スワイプ = ✋興味なし**（タッチ・マウスドラッグ両対応）
-  - キーボード: `→` / `←` / `↓`(スキップ)。**Undo**は直前の判定に対して `verdict: 'undo'` イベントを追記送信し、カードを山に戻す（§5参照。イベントは追記型のためサーバー側でも履歴が保全される）
-  - 判定はフィードバックAPIへ即時POST。**APIのベースURLはHTML生成時に絶対URL（`http://127.0.0.1:<port>`）で埋め込む**ため、`file://` で開いた場合や過去日のレポートからも同一エンドポイントに届く
-  - サーバー不達時は localStorage にキューし、次回オンライン時に再送（ポートは固定既定値のためオリジンが安定し、キューが迷子にならない）
+HTMLは**単一ビュー**（v0.3/M4で2モード切替を廃止）:
+- 読み物としてのダイジェスト。セクション開閉式（Kagi News方式）、ソース内訳のグレイン表示、タグチップ。JSなしでも全文可読
+- **インラインアクション（オーナーのみ）**: ロード時に `GET /api/feedback/state` の成否で判定し、成功時のみ各カードに「★お気に入り / ✕興味なし」ボタンをJSで注入する。閲覧者には操作UIを一切表示しない（`file://` はオーナー扱い）
+  - 判定状態は次回以降も復元表示され、いつでも変更できる（favorite⇄undo⇄not_interested。イベントは追記型のため履歴保全）
+  - `.is-fav` はゴールドアクセント、`.is-muted` は本文を畳んで減光
+  - 判定はフィードバックAPIへ即時POST。**APIベースURLは実行時判定**（`file://` はHTML生成時に埋め込んだ `http://127.0.0.1:<port>`、それ以外は同一オリジン相対）
+  - サーバー不達時は localStorage にキューし、次回オンライン時に再送
 
 ### 4.7 フィードバック収集サーバー（ローカル、M3でWorkerに差し替え）
 
@@ -158,6 +159,7 @@ HTMLは2モード切替:
 | `GET /api/health` | — | `{ok: true, version, db: <path>}` |
 | `POST /api/feedback` | `{run_id, cluster_id, item_ids: string[], verdict: 'favorite'\|'not_interested'\|'skip'\|'undo'}`。`run_id` は**itemが掲載されたrun**（HTML埋め込み値）。`decided_at` はサーバー側で付与 | `{ok: true, recorded: <イベント挿入数>}` |
 | `GET /api/feedback/summary` | — | verdict別・run別の集計JSON（動作確認用） |
+| `GET /api/feedback/state` | 任意で `?run_id=` | item_idごとの最新判定 `{state: {"<item_id>": "favorite"\|"not_interested"\|"skip"}}`（最新が `undo` のitemは含めない）。**cloud側はキー認証必須**で、これがオーナー/閲覧者の判定を兼ねる |
 | `GET /` ほか静的パス | — | `output/` 配下の静的配信 |
 
 - 役割は上記のみ。skillはレポート生成後にサーバーを起動（または再利用）し `open http://127.0.0.1:<port>/YYYY-MM-DD/report.html` でブラウザを開く

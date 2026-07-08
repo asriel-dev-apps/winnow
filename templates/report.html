@@ -38,10 +38,8 @@
     .wordmark { font-family:var(--mono); font-weight:800; font-size:15px; letter-spacing:.14em; }
     .wordmark .tilt { color:var(--gold); }
     .runmeta { font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted); }
-    .tabs { display:none; margin-left:auto; gap:4px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:3px; }
-    .js .tabs { display:flex; }
-    .tab { appearance:none; border:0; background:transparent; color:var(--ink-2); font-family:var(--sans); font-size:13px; font-weight:600; padding:6px 14px; border-radius:999px; cursor:pointer; }
-    .tab[aria-selected="true"] { background:var(--ink); color:var(--page); }
+    .ownerChip { display:none; margin-left:auto; border:1px solid var(--line); border-radius:999px; padding:2px 9px; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--ink-2); background:var(--card); white-space:nowrap; }
+    .owner-mode .ownerChip { display:inline-flex; }
 
     /* ---- layout ---- */
     main, .hero { max-width:760px; margin:0 auto; padding:0 20px; }
@@ -53,7 +51,7 @@
     /* ---- macro summary ---- */
     .macro { list-style:none; margin:0 0 26px; padding:0; }
     .macro li { position:relative; padding-left:26px; margin:10px 0; font-size:16.5px; font-weight:600; line-height:1.8; }
-    .macro li::before { content:"—"; position:absolute; left:0; color:var(--gold); font-weight:800; }
+    .macro li::before { content:"-"; position:absolute; left:0; color:var(--gold); font-weight:800; }
 
     /* ---- grains (signature): 1粒=掲載item 1件 ---- */
     .grains { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:8px 0 10px; }
@@ -68,6 +66,12 @@
 
     /* ---- story cards ---- */
     .story { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 24px 16px; margin:18px 0; box-shadow:0 1px 2px var(--ring); }
+    .story.is-fav { border-left:3px solid var(--gold); padding-left:22px; }
+    .story.is-muted { opacity:.55; }
+    .story.is-muted > p,
+    .story.is-muted > .why,
+    .story.is-muted > details,
+    .story.is-muted > .links { display:none; }
     .story .eyebrow { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin-bottom:10px; }
     .src { white-space:nowrap; }
     .chip { border:1px solid var(--line); border-radius:6px; padding:1px 7px; white-space:nowrap; color:var(--ink-2); }
@@ -91,7 +95,14 @@
     .links a:hover { text-decoration-color:var(--gold); }
     .links .from { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted); }
     .muted { color:var(--muted); }
-    .feedbackBadge { font-size:15px; margin-left:6px; }
+
+    /* ---- owner actions ---- */
+    .storyActions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+    .actionBtn { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; min-width:44px; padding:0 13px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink-2); font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; }
+    .actionBtn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .actionBtn:hover { border-color:var(--muted); color:var(--ink); }
+    .actionBtn.is-active { color:var(--gold-text); border-color:var(--gold); background:var(--gold-wash); }
+    .actionBtn.no.is-active { color:var(--ink-2); border-color:var(--muted); background:var(--page); }
 
     /* ---- fetch status ---- */
     .fetchwrap { margin:34px 0 60px; }
@@ -99,32 +110,13 @@
     .fetch li { display:flex; gap:10px; padding:4px 0; border-bottom:1px dashed var(--line); }
     .fetch .ok { color:var(--s-hatebu); } .fetch .ng { color:var(--s-reddit); }
 
-    /* ---- triage mode ---- */
-    .mode { display:none; }
-    .mode.active { display:block; }
-    #triageMode { padding-top:18px; }
-    .progress { text-align:center; font-family:var(--mono); font-size:12px; letter-spacing:.1em; color:var(--ink-2); margin:6px 0; }
-    .stackWrap { min-height:440px; display:grid; place-items:center; position:relative; }
-    .stackWrap > * { grid-area:1 / 1; }
-    .triageCard { width:min(640px,100%); min-height:340px; touch-action:none; user-select:none; cursor:grab; transition:transform .18s ease, opacity .18s ease; position:relative; }
-    .triageCard.dragging { transition:none; cursor:grabbing; }
-    .triageCard .verdictMark { position:absolute; top:16px; font-family:var(--mono); font-weight:800; font-size:15px; letter-spacing:.14em; padding:5px 12px; border-radius:8px; opacity:0; pointer-events:none; }
-    .triageCard .yes { right:16px; color:var(--gold-text); border:2px solid var(--gold); background:var(--gold-wash); }
-    .triageCard .no { left:16px; color:var(--ink-2); border:2px solid var(--muted); background:var(--page); }
-    .peek { width:min(640px,100%); min-height:340px; transform:scale(.955) translateY(10px); opacity:.5; pointer-events:none; }
-    .controls { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin:18px 0 6px; }
-    .control { display:inline-flex; align-items:center; gap:7px; min-height:44px; padding:0 18px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); font-family:var(--sans); font-size:14px; font-weight:600; cursor:pointer; }
-    .control:hover { border-color:var(--muted); }
-    .control.fav { border-color:var(--gold); color:var(--gold-text); background:var(--gold-wash); }
-    .keyhint { text-align:center; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted); margin-bottom:40px; }
-    .status { text-align:center; min-height:24px; color:var(--muted); }
-
-    .triage-active .hero { display:none; }
     @media (max-width:520px) {
       body { font-size:15px; }
       .story { padding:18px 16px 12px; border-radius:12px; }
+      .story.is-fav { padding-left:14px; }
       .runmeta { display:none; }
-      .keyhint { display:none; }
+      .ownerChip { margin-left:auto; font-size:10.5px; }
+      .actionBtn { flex:1 1 160px; }
     }
   </style>
 </head>
@@ -133,78 +125,28 @@
     <div class="topbar-in">
       <span class="wordmark">WINNO<span class="tilt">W̸</span></span>
       <span class="runmeta" id="runmeta"></span>
-      <div class="tabs" role="tablist" aria-label="表示モード">
-        <button class="tab" id="docTab" role="tab" aria-selected="true">📖 読む</button>
-        <button class="tab" id="triageTab" role="tab" aria-selected="false">🃏 選り分ける</button>
-      </div>
+      <span class="ownerChip" id="ownerChip">★ 0 / ✕ 0</span>
     </div>
   </div>
   <header class="hero">
     <!--__STATIC_HEADER__-->
   </header>
   <main>
-    <section id="docMode" class="mode active" role="tabpanel"><!--__STATIC_DOCUMENT__--></section>
-    <section id="triageMode" class="mode" role="tabpanel">
-      <p class="progress" id="progress"></p>
-      <div class="stackWrap" id="stack"></div>
-      <div class="controls">
-        <button class="control" id="noBtn">✋ 興味なし</button>
-        <button class="control" id="skipBtn">↓ スキップ</button>
-        <button class="control" id="undoBtn">↩ 戻す</button>
-        <button class="control fav" id="favBtn">⭐ お気に入り</button>
-      </div>
-      <p class="status" id="status" aria-live="polite"></p>
-      <p class="keyhint">← 興味なし · → お気に入り · ↓ スキップ · Z 戻す</p>
-    </section>
+    <section id="docMode"><!--__STATIC_DOCUMENT__--></section>
   </main>
   <script>
     const data = /*__WINNOW_DATA__*/;
-    const SRC = ['hn','zenn','qiita','hatebu','ghtrend','reddit','lobsters','agents'];
-    const srcVar = s => SRC.includes(s) ? `var(--s-${s})` : 'var(--muted)';
-    const state = { index:0, deck:[...(data.stories || [])], history:[], counts:{favorite:0, not_interested:0, skip:0} };
+    const state = { feedback:{} };
     const queueKey = 'winnow-feedback-queue';
+    const apiBase = location.protocol === 'file:' ? (data.apiBase || '') : '';
 
-    document.getElementById('runmeta').textContent = `${data.date || ''} · RUN ${data.run_id ?? ''} · ${state.deck.length} STORIES`;
+    document.getElementById('runmeta').textContent = `${data.date || ''} · RUN ${data.run_id ?? ''} · ${(data.stories || []).length} STORIES`;
 
-    function esc(text) {
-      return String(text ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
-    function storySources(story) { return [...new Set((story.items || []).map(i => i.source))]; }
-    function engagement(item) {
-      return Object.entries(item.engagement || {}).filter(([k]) => k !== 'hn_object_id').map(([k,v]) => `${k} ${v}`).join(' · ');
-    }
-    function storyHtml(story, triage=false) {
-      const sections = story.sections || {};
-      const qas = Array.isArray(sections.quick_questions) ? sections.quick_questions : [];
-      const srcTags = storySources(story).map(s => `<span class="src"><i class="dot" style="background:${srcVar(s)}"></i>${esc(s.toUpperCase())}</span>`).join('');
-      const eng = (story.items || []).slice(0,1).map(i => engagement(i)).filter(Boolean).join('');
-      const date = (story.items || []).slice(0,1).map(i => i.published_at ? new Date(i.published_at).toLocaleDateString('ja-JP') : '').filter(Boolean).join('');
-      return `<article class="story ${triage ? 'triageCard' : ''}" data-cluster="${esc(story.cluster_id)}">
-        ${triage ? '<span class="verdictMark yes">⭐ FAVORITE</span><span class="verdictMark no">✋ PASS</span>' : ''}
-        <div class="eyebrow">${srcTags}<span class="chip">SCORE ${esc(story.composite_score)}</span>${story.is_serendipity ? '<span class="chip gold">🎲 SERENDIPITY</span>' : ''}${eng ? `<span class="metaeng">${esc(eng)}</span>` : ''}${date ? `<span class="metaeng">${esc(date)}</span>` : ''}</div>
-        <h3>${esc(story.translated_title)}<span class="feedbackBadge docFeedbackBadge" hidden></span>${story.__feedback ? `<span class="feedbackBadge">${esc(story.__feedback)}</span>` : ''}</h3>
-        <p>${esc(story.summary)}</p>
-        <div class="why"><b>WHY THIS</b>${esc(story.selection_reason)}</div>
-        ${sections.discussion ? `<details><summary>💬 議論の論点</summary><p>${esc(sections.discussion)}</p></details>` : ''}
-        ${sections.perspectives ? `<details><summary>⚖️ Perspectives</summary><p>${esc(sections.perspectives)}</p></details>` : ''}
-        ${qas.length ? `<details><summary>❓ Quick questions</summary>${qas.map(qa => `<p><strong>Q.</strong> ${esc(qa.q)}<br><strong>A.</strong> ${esc(qa.a)}</p>`).join('')}</details>` : ''}
-        ${sections.did_you_know ? `<details><summary>💡 Did you know?</summary><p>${esc(sections.did_you_know)}</p></details>` : ''}
-        <ul class="links">${(story.items || []).map(i => `<li><a href="${esc(i.url)}" rel="noreferrer">${esc(i.title)}</a> <span class="from">${esc(i.source.toUpperCase())}</span></li>`).join('')}</ul>
-      </article>`;
-    }
-    function setDocFeedback(story, label) {
-      const article = [...document.querySelectorAll('#docMode [data-cluster]')].find(el => el.dataset.cluster === String(story.cluster_id ?? ''));
-      const badge = article?.querySelector('.docFeedbackBadge');
-      if (!badge) return;
-      badge.textContent = label;
-      badge.hidden = !label;
-    }
     function saveQueue(payload) {
       const q = JSON.parse(localStorage.getItem(queueKey) || '[]');
       q.push(payload);
       localStorage.setItem(queueKey, JSON.stringify(q));
     }
-    const apiBase = location.protocol === 'file:' ? (data.apiBase || '') : '';
     async function postFeedback(payload) {
       try {
         const res = await fetch(`${apiBase}/api/feedback`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload)});
@@ -219,99 +161,100 @@
       localStorage.setItem(queueKey, '[]');
       for (const payload of q) await postFeedback(payload);
     }
-    function current() { return state.deck[state.index]; }
-    function updateProgress(done=false) {
-      const n = String(Math.min(state.index + 1, state.deck.length)).padStart(2,'0');
-      const total = String(state.deck.length).padStart(2,'0');
-      document.getElementById('progress').textContent = done
-        ? `DONE · ⭐ ${state.counts.favorite} · ✋ ${state.counts.not_interested} · SKIP ${state.counts.skip}`
-        : `${n} / ${total} · ⭐ ${state.counts.favorite} · ✋ ${state.counts.not_interested}`;
+    function storyItems(story) {
+      return (story.items || []).map((item) => String(item.id || '')).filter(Boolean);
     }
-    function renderCard() {
-      const stack = document.getElementById('stack');
-      const story = current();
-      if (!story) {
-        stack.innerHTML = '<div class="story"><h3>選り分け完了 🌾</h3><p>すべてのカードを判定しました。判定は次回のサーベイの選別に反映されます。</p></div>';
-        updateProgress(true);
-        return;
+    function storyState(story) {
+      for (const itemId of storyItems(story)) {
+        const verdict = state.feedback[itemId];
+        if (verdict) return verdict;
       }
-      const next = state.deck[state.index + 1];
-      stack.innerHTML = (next ? `<div class="peek">${storyHtml(next, false)}</div>` : '') + storyHtml(story, true);
-      const card = stack.querySelector('.triageCard');
-      const yes = card.querySelector('.verdictMark.yes');
-      const no = card.querySelector('.verdictMark.no');
-      let startX = 0, dx = 0;
-      card.addEventListener('pointerdown', ev => { if (ev.target.closest('a, summary')) return; startX = ev.clientX; dx = 0; card.setPointerCapture(ev.pointerId); card.classList.add('dragging'); });
-      card.addEventListener('pointermove', ev => {
-        if (!card.classList.contains('dragging')) return;
-        dx = ev.clientX - startX;
-        card.style.transform = `translateX(${dx}px) rotate(${dx/18}deg)`;
-        yes.style.opacity = Math.min(Math.max(dx - 30, 0) / 90, 1);
-        no.style.opacity = Math.min(Math.max(-dx - 30, 0) / 90, 1);
-      });
-      card.addEventListener('pointerup', () => {
-        card.classList.remove('dragging');
-        if (dx > 120) decide('favorite');
-        else if (dx < -120) decide('not_interested');
-        else { card.style.transform = ''; yes.style.opacity = 0; no.style.opacity = 0; }
-      });
-      updateProgress();
+      return '';
     }
     function payload(story, verdict) {
-      return { run_id:data.run_id, cluster_id:story.cluster_id, item_ids:(story.items || []).map(i => i.id), verdict };
+      return { run_id:data.run_id, cluster_id:story.cluster_id, item_ids:storyItems(story), verdict };
     }
-    function decide(verdict) {
-      const story = current();
-      if (!story) return;
-      state.history.push({ story, verdict });
-      state.counts[verdict] = (state.counts[verdict] || 0) + 1;
-      story.__feedback = verdict === 'favorite' ? '⭐' : verdict === 'not_interested' ? '✋' : '';
+    function icon(type) {
+      if (type === 'star') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z"/></svg>';
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    }
+    function applyStoryState(article, story) {
+      const verdict = storyState(story);
+      article.classList.toggle('is-fav', verdict === 'favorite');
+      article.classList.toggle('is-muted', verdict === 'not_interested');
+      const fav = article.querySelector('[data-feedback-action="favorite"]');
+      const no = article.querySelector('[data-feedback-action="not_interested"]');
+      if (fav) {
+        fav.classList.toggle('is-active', verdict === 'favorite');
+        fav.setAttribute('aria-pressed', String(verdict === 'favorite'));
+        fav.innerHTML = verdict === 'favorite' ? `${icon('star')} お気に入り ✓` : `${icon('star')} お気に入り`;
+      }
+      if (no) {
+        no.classList.toggle('is-active', verdict === 'not_interested');
+        no.setAttribute('aria-pressed', String(verdict === 'not_interested'));
+        no.innerHTML = verdict === 'not_interested' ? `${icon('x')} 興味なし ✓（タップで戻す）` : `${icon('x')} 興味なし`;
+      }
+    }
+    function updateOwnerChip() {
+      const counts = { favorite:0, not_interested:0 };
+      for (const story of data.stories || []) {
+        const verdict = storyState(story);
+        if (verdict === 'favorite' || verdict === 'not_interested') counts[verdict] += 1;
+      }
+      document.getElementById('ownerChip').textContent = `★ ${counts.favorite} / ✕ ${counts.not_interested}`;
+    }
+    function setStoryVerdict(article, story, nextVerdict) {
+      const current = storyState(story);
+      const verdict = current === nextVerdict ? 'undo' : nextVerdict;
+      for (const itemId of storyItems(story)) {
+        if (verdict === 'undo') delete state.feedback[itemId];
+        else state.feedback[itemId] = verdict;
+      }
+      applyStoryState(article, story);
+      updateOwnerChip();
       postFeedback(payload(story, verdict));
-      state.index += 1;
-      document.getElementById('status').textContent = verdict === 'favorite' ? '⭐ お気に入りに追加しました' : verdict === 'not_interested' ? '✋ 興味なしとして記録しました' : '↓ スキップしました';
-      setDocFeedback(story, story.__feedback);
-      renderCard();
     }
-    function undo() {
-      const last = state.history.pop();
-      if (!last) return;
-      state.index = Math.max(0, state.index - 1);
-      state.counts[last.verdict] = Math.max(0, (state.counts[last.verdict] || 0) - 1);
-      last.story.__feedback = '';
-      postFeedback(payload(last.story, 'undo'));
-      document.getElementById('status').textContent = '↩ 直前の判定を取り消しました';
-      setDocFeedback(last.story, '');
-      renderCard();
+    function enableOwnerMode(initialState) {
+      state.feedback = {...initialState};
+      document.body.classList.add('owner-mode');
+      const articles = [...document.querySelectorAll('article.story')];
+      for (const [index, article] of articles.entries()) {
+        const story = (data.stories || [])[index];
+        if (!story) continue;
+        const bar = document.createElement('div');
+        bar.className = 'storyActions';
+        bar.innerHTML = `<button class="actionBtn fav" type="button" data-feedback-action="favorite" aria-pressed="false"></button><button class="actionBtn no" type="button" data-feedback-action="not_interested" aria-pressed="false"></button>`;
+        bar.querySelector('[data-feedback-action="favorite"]').addEventListener('click', () => setStoryVerdict(article, story, 'favorite'));
+        bar.querySelector('[data-feedback-action="not_interested"]').addEventListener('click', () => setStoryVerdict(article, story, 'not_interested'));
+        article.append(bar);
+        applyStoryState(article, story);
+      }
+      updateOwnerChip();
+      flushQueue();
     }
-    const docMode = document.getElementById('docMode');
-    const triageMode = document.getElementById('triageMode');
-    const docTab = document.getElementById('docTab');
-    const triageTab = document.getElementById('triageTab');
-    function setMode(triage) {
-      docTab.setAttribute('aria-selected', String(!triage));
-      triageTab.setAttribute('aria-selected', String(triage));
-      docMode.classList.toggle('active', !triage);
-      triageMode.classList.toggle('active', triage);
-      document.body.classList.toggle('triage-active', triage);
-      window.scrollTo({top: 0});
-      if (triage) renderCard();
+    async function bootFeedbackUi() {
+      const url = `${apiBase}/api/feedback/state?run_id=${encodeURIComponent(data.run_id ?? '')}`;
+      if (location.protocol === 'file:') {
+        try {
+          const res = await fetch(url);
+          const body = res.ok ? await res.json() : { state:{} };
+          enableOwnerMode(body.state || {});
+        } catch {
+          enableOwnerMode({});
+        }
+        return;
+      }
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const body = await res.json();
+        enableOwnerMode(body.state || {});
+      } catch {
+        /* viewer mode: leave the static document untouched */
+      }
     }
-    docTab.onclick = () => setMode(false);
-    triageTab.onclick = () => setMode(true);
-    document.getElementById('favBtn').onclick = () => decide('favorite');
-    document.getElementById('noBtn').onclick = () => decide('not_interested');
-    document.getElementById('skipBtn').onclick = () => decide('skip');
-    document.getElementById('undoBtn').onclick = undo;
-    window.addEventListener('keydown', ev => {
-      if (!triageMode.classList.contains('active')) return;
-      if (ev.target.closest('input, textarea')) return;
-      if (ev.key === 'ArrowRight') decide('favorite');
-      if (ev.key === 'ArrowLeft') decide('not_interested');
-      if (ev.key === 'ArrowDown') decide('skip');
-      if (ev.key === 'z') undo();
-    });
     window.addEventListener('online', flushQueue);
-    flushQueue();
+    bootFeedbackUi();
   </script>
 </body>
 </html>

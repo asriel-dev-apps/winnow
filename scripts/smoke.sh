@@ -83,6 +83,23 @@ else
   fail "feedback_post" "curl failed"
 fi
 
+if curl -sf --max-time 5 "http://127.0.0.1:${WINNOW_PORT}/api/feedback/state?run_id=${run_id}" >"$tmpdir/state.out"; then
+  if jq -e --argjson ids "$item_ids" '. as $root | .ok == true and ($ids | all(.[]; $root.state[.] == "favorite"))' "$tmpdir/state.out" >/dev/null; then pass "feedback_state"; else fail "feedback_state" "$(cat "$tmpdir/state.out")"; fi
+else
+  fail "feedback_state" "curl failed"
+fi
+
+printf '{"run_id":%s,"cluster_id":"s01","item_ids":%s,"verdict":"undo"}' "$run_id" "$item_ids" > "$tmpdir/feedback-undo.json"
+if curl -sf --max-time 5 -H 'content-type: application/json' --data @"$tmpdir/feedback-undo.json" "http://127.0.0.1:${WINNOW_PORT}/api/feedback" >"$tmpdir/feedback-undo.out"; then
+  if curl -sf --max-time 5 "http://127.0.0.1:${WINNOW_PORT}/api/feedback/state?run_id=${run_id}" >"$tmpdir/state-undo.out"; then
+    if jq -e --argjson ids "$item_ids" '. as $root | .ok == true and ($ids | all(.[]; . as $id | ($root.state | has($id) | not)))' "$tmpdir/state-undo.out" >/dev/null; then pass "feedback_state_undo"; else fail "feedback_state_undo" "$(cat "$tmpdir/state-undo.out")"; fi
+  else
+    fail "feedback_state_undo" "state curl failed"
+  fi
+else
+  fail "feedback_state_undo" "undo curl failed"
+fi
+
 if curl -sf --max-time 5 "http://127.0.0.1:${WINNOW_PORT}/api/feedback/summary" >"$tmpdir/summary.out"; then
   if jq -e '.summary[] | select(.verdict == "favorite" and .count == 2)' "$tmpdir/summary.out" >/dev/null; then pass "feedback_summary"; else fail "feedback_summary" "$(cat "$tmpdir/summary.out")"; fi
 else
@@ -94,7 +111,7 @@ import { DatabaseSync } from 'node:sqlite';
 const db = new DatabaseSync(process.env.WINNOW_DB);
 console.log(db.prepare('SELECT COUNT(*) AS n FROM feedback_events').get().n);
 NODE
-if [[ "$(cat "$tmpdir/feedback-count.out" 2>/dev/null)" == "2" ]]; then pass "feedback_events_rows"; else fail "feedback_events_rows" "$(cat "$tmpdir/feedback-count.out" "$tmpdir/feedback-count.err" 2>/dev/null)"; fi
+if [[ "$(cat "$tmpdir/feedback-count.out" 2>/dev/null)" == "4" ]]; then pass "feedback_events_rows"; else fail "feedback_events_rows" "$(cat "$tmpdir/feedback-count.out" "$tmpdir/feedback-count.err" 2>/dev/null)"; fi
 
 node --input-type=module - "$smoke_out/stories.json" <<'NODE' >"$tmpdir/learned-seed.out" 2>"$tmpdir/learned-seed.err"
 import { DatabaseSync } from 'node:sqlite';
