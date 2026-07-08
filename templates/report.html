@@ -119,6 +119,13 @@
     .rankNote { font-family:var(--sans); color:var(--ink-2); }
 
     /* ---- owner actions ---- */
+    /* スワイプジェスチャー(オーナー・タッチのみ)。touch-action:pan-yで縦スクロールはブラウザに委ね、
+       横方向の動きだけをJSで拾う */
+    .owner-mode article.story { touch-action:pan-y; position:relative; transition:transform .18s ease; }
+    article.story.swiping { transition:none; user-select:none; }
+    .swipeHint { position:absolute; top:14px; font-family:var(--mono); font-weight:800; font-size:12px; letter-spacing:.12em; padding:4px 10px; border-radius:8px; opacity:0; pointer-events:none; z-index:2; }
+    .swipeHint.fav { right:14px; color:var(--gold-text); border:2px solid var(--gold); background:var(--gold-wash); }
+    .swipeHint.no { left:14px; color:var(--ink-2); border:2px solid var(--muted); background:var(--page); }
     .storyActions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
     .actionBtn { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; min-width:44px; padding:0 13px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink-2); font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; }
     .actionBtn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
@@ -318,6 +325,53 @@
       updateOwnerChip();
       postFeedback(payload(story, verdict));
     }
+    function attachSwipe(article, story) {
+      const hintFav = document.createElement('span');
+      hintFav.className = 'swipeHint fav';
+      hintFav.textContent = '★ FAVORITE';
+      const hintNo = document.createElement('span');
+      hintNo.className = 'swipeHint no';
+      hintNo.textContent = '✕ PASS';
+      article.append(hintFav, hintNo);
+      let startX = 0, startY = 0, dx = 0, active = false, horizontal = false;
+      article.addEventListener('pointerdown', ev => {
+        if (ev.pointerType !== 'touch') return;
+        if (ev.target.closest('a, button, summary')) return;
+        startX = ev.clientX; startY = ev.clientY; dx = 0; active = true; horizontal = false;
+      });
+      article.addEventListener('pointermove', ev => {
+        if (!active || ev.pointerType !== 'touch') return;
+        dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!horizontal) {
+          // 横意図が明確になるまで何もしない。縦意図ならブラウザのスクロールに譲る
+          if (Math.abs(dx) > 28 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+            horizontal = true;
+            article.classList.add('swiping');
+            try { article.setPointerCapture(ev.pointerId); } catch {}
+          } else if (Math.abs(dy) > 14) { active = false; return; }
+          else return;
+        }
+        const shift = Math.max(Math.min(dx * 0.45, 120), -120);
+        article.style.transform = `translateX(${shift}px)`;
+        hintFav.style.opacity = Math.min(Math.max(dx - 40, 0) / 100, 1);
+        hintNo.style.opacity = Math.min(Math.max(-dx - 40, 0) / 100, 1);
+      });
+      const finish = () => {
+        if (!active) return;
+        active = false;
+        if (!horizontal) return;
+        horizontal = false;
+        article.classList.remove('swiping');
+        article.style.transform = '';
+        hintFav.style.opacity = 0;
+        hintNo.style.opacity = 0;
+        if (dx > 110) setStoryVerdict(article, story, 'favorite');
+        else if (dx < -110) setStoryVerdict(article, story, 'not_interested');
+      };
+      article.addEventListener('pointerup', finish);
+      article.addEventListener('pointercancel', finish);
+    }
     function enableOwnerMode(initialState) {
       state.feedback = {...initialState};
       document.body.classList.add('owner-mode');
@@ -333,6 +387,7 @@
         bar.querySelector('[data-feedback-action="not_interested"]').addEventListener('click', () => setStoryVerdict(article, story, 'not_interested'));
         article.append(bar);
         applyStoryState(article, story);
+        attachSwipe(article, story);
       }
       updateOwnerChip();
       flushQueue();
