@@ -85,6 +85,7 @@ const html = `<!doctype html>
       --page:#f9f9f7; --card:#fcfcfb; --ink:#17181a; --ink-2:#52514e; --muted:#898781;
       --line:#e1e0d9; --ring:rgba(11,11,11,.10);
       --gold:#c9920e; --gold-text:#7a5800; --gold-wash:rgba(201,146,14,.08);
+      --link:#256abf;
       --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
       --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,-apple-system,"Segoe UI",sans-serif;
     }
@@ -93,6 +94,7 @@ const html = `<!doctype html>
         --page:#0d0d0d; --card:#1a1a19; --ink:#f2f2ef; --ink-2:#c3c2b7; --muted:#898781;
         --line:#2c2c2a; --ring:rgba(255,255,255,.10);
         --gold:#e3b341; --gold-text:#e3b341; --gold-wash:rgba(227,179,65,.09);
+        --link:#86b6ef;
       }
     }
     * { box-sizing:border-box; }
@@ -111,7 +113,7 @@ const html = `<!doctype html>
     .reportList { list-style:none; margin:0; padding:0; }
     .reportRow { display:grid; grid-template-columns:112px 130px minmax(0,1fr); gap:12px 18px; padding:13px 0; border-bottom:1px solid var(--line); align-items:start; }
     .reportRow:last-child { border-bottom:0; }
-    a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+    a { color:var(--link); text-decoration:underline; text-decoration-color:var(--link); text-underline-offset:3px; }
     a:hover { text-decoration-color:var(--gold); }
     .date, .count, .matchedTitle, .authLink { font-family:var(--mono); }
     .date { font-weight:800; }

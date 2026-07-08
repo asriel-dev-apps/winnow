@@ -12,6 +12,7 @@
       --page:#f9f9f7; --card:#fcfcfb; --ink:#17181a; --ink-2:#52514e; --muted:#898781;
       --line:#e1e0d9; --ring:rgba(11,11,11,.10);
       --gold:#c9920e; --gold-text:#7a5800; --gold-wash:rgba(201,146,14,.08);
+      --link:#256abf;
       /* source colors (validated categorical palette, fixed order) */
       --s-hn:#2a78d6; --s-zenn:#1baf7a; --s-qiita:#eda100; --s-hatebu:#008300;
       --s-ghtrend:#4a3aa7; --s-reddit:#e34948; --s-lobsters:#e87ba4; --s-agents:#eb6834;
@@ -23,6 +24,7 @@
         --page:#0d0d0d; --card:#1a1a19; --ink:#f2f2ef; --ink-2:#c3c2b7; --muted:#898781;
         --line:#2c2c2a; --ring:rgba(255,255,255,.10);
         --gold:#e3b341; --gold-text:#e3b341; --gold-wash:rgba(227,179,65,.09);
+        --link:#86b6ef;
         --s-hn:#3987e5; --s-zenn:#199e70; --s-qiita:#c98500; --s-hatebu:#008300;
         --s-ghtrend:#9085e9; --s-reddit:#e66767; --s-lobsters:#d55181; --s-agents:#d95926;
       }
@@ -98,7 +100,7 @@
     details p { margin:8px 0 4px; font-size:14px; color:var(--ink-2); }
     .links { margin:14px 0 4px; padding:0; list-style:none; border-top:1px solid var(--line); }
     .links li { padding:7px 0 0; font-size:13.5px; line-height:1.7; }
-    .links a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+    .links a { color:var(--link); text-decoration:underline; text-decoration-color:var(--link); text-underline-offset:3px; }
     .links a:hover { text-decoration-color:var(--gold); }
     .links .from { font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--muted); }
     .muted { color:var(--muted); }
@@ -111,7 +113,7 @@
     .watchList, .rankingList { margin:8px 0 0; padding-left:22px; }
     .watchList li, .rankingList li { padding:4px 0; border-bottom:1px dashed var(--line); }
     .watchList li:last-child, .rankingList li:last-child { border-bottom:0; }
-    .watchList a, .rankingList a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+    .watchList a, .rankingList a { color:var(--link); text-decoration:underline; text-decoration-color:var(--link); text-underline-offset:3px; }
     .watchList a:hover, .rankingList a:hover { text-decoration-color:var(--gold); }
     .watchDate { margin-left:8px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); }
     .watchList p { margin:2px 0 4px; color:var(--ink-2); font-size:14px; line-height:1.7; }
