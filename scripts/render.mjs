@@ -107,7 +107,7 @@ function storyHtml(story) {
         ${sections.perspectives ? `<details><summary>⚖️ Perspectives</summary><p>${esc(sections.perspectives)}</p></details>` : ''}
         ${qas.length ? `<details><summary>❓ Quick questions</summary>${qas.map((qa) => `<p><strong>Q.</strong> ${esc(qa.q)}<br><strong>A.</strong> ${esc(qa.a)}</p>`).join('')}</details>` : ''}
         ${sections.did_you_know ? `<details><summary>💡 Did you know?</summary><p>${esc(sections.did_you_know)}</p></details>` : ''}
-        <ul class="links">${(story.items || []).map((i) => `<li><a href="${esc(i.url)}" rel="noreferrer">${esc(i.title)}</a> <span class="from">${esc(String(i.source).toUpperCase())}</span></li>`).join('')}</ul>
+        <ul class="links">${(story.items || []).map((i) => `<li><a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a> <span class="from">${esc(String(i.source).toUpperCase())}</span></li>`).join('')}</ul>
       </article>`;
 }
 
@@ -120,7 +120,7 @@ function releaseWatchHtml() {
       const releases = Array.isArray(entry.releases) ? entry.releases : [];
       return `<article class="watchCard">
         <h3 class="watchRepo">${esc(entry.repo)}</h3>
-        <ul class="watchList">${releases.map((release) => `<li><a href="${esc(release.url)}" rel="noreferrer">${esc(release.tag)}</a>${release.published_at ? ` <span class="watchDate">${esc(formatDate(release.published_at))}</span>` : ''}${release.notes_summary ? `<p>${esc(release.notes_summary)}</p>` : ''}</li>`).join('')}</ul>
+        <ul class="watchList">${releases.map((release) => `<li><a href="${esc(release.url)}" target="_blank" rel="noopener noreferrer">${esc(release.tag)}</a>${release.published_at ? ` <span class="watchDate">${esc(formatDate(release.published_at))}</span>` : ''}${release.notes_summary ? `<p>${esc(release.notes_summary)}</p>` : ''}</li>`).join('')}</ul>
       </article>`;
     }).join('')}</div>
   </section>`;
@@ -131,7 +131,7 @@ function ossRankingHtml() {
   if (!entries.length) return '';
   return `<section class="watchSection" id="rankingView">
     <p class="eyebrow">OSS RANKING</p>
-    <ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" rel="noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>
+    <ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>
   </section>`;
 }
 
