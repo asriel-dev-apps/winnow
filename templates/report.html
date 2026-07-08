@@ -128,7 +128,7 @@
     .swipeHint { position:absolute; top:14px; font-family:var(--mono); font-weight:800; font-size:12px; letter-spacing:.12em; padding:4px 10px; border-radius:8px; opacity:0; pointer-events:none; z-index:2; }
     .swipeHint.fav { right:14px; color:var(--gold-text); border:2px solid var(--gold); background:var(--gold-wash); }
     .swipeHint.no { left:14px; color:var(--ink-2); border:2px solid var(--muted); background:var(--page); }
-    .storyActions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+    .storyActions { display:flex; flex-wrap:nowrap; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
     .actionBtn { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; min-width:44px; padding:0 13px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink-2); font-family:var(--sans); font-size:14px; font-weight:700; cursor:pointer; }
     .actionBtn svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .actionBtn:hover { border-color:var(--muted); color:var(--ink); }
@@ -155,7 +155,7 @@
       .contentTabs { order:3; flex:1 0 100%; margin-left:0; gap:0; justify-content:space-around; align-self:auto; }
       .contentTab { min-height:40px; padding:0 6px; }
       .ownerChip { margin-left:auto; font-size:10.5px; }
-      .actionBtn { flex:1 1 160px; }
+      .actionBtn { flex:1 1 0; min-width:0; white-space:nowrap; padding:0 10px; }
     }
   </style>
 </head>
@@ -305,7 +305,7 @@
       if (no) {
         no.classList.toggle('is-active', verdict === 'not_interested');
         no.setAttribute('aria-pressed', String(verdict === 'not_interested'));
-        no.innerHTML = verdict === 'not_interested' ? `${icon('x')} 興味なし ✓（タップで戻す）` : `${icon('x')} 興味なし`;
+        no.innerHTML = verdict === 'not_interested' ? `${icon('x')} 興味なし ✓` : `${icon('x')} 興味なし`;
       }
     }
     function updateOwnerChip() {
@@ -327,6 +327,8 @@
       updateOwnerChip();
       postFeedback(payload(story, verdict));
     }
+    // 長押しドラッグは使用感の再検討中のため一時無効化(有効化はこのフラグのみ)
+    const DRAG_GESTURE = false;
     function attachSwipe(article, story) {
       const hintFav = document.createElement('span');
       hintFav.className = 'swipeHint fav';
@@ -402,7 +404,7 @@
         bar.querySelector('[data-feedback-action="not_interested"]').addEventListener('click', () => setStoryVerdict(article, story, 'not_interested'));
         article.append(bar);
         applyStoryState(article, story);
-        attachSwipe(article, story);
+        if (DRAG_GESTURE) attachSwipe(article, story);
       }
       updateOwnerChip();
       flushQueue();
