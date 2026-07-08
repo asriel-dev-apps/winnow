@@ -43,6 +43,7 @@
 | **M2** | 定期実行 + アーカイブ索引ページ（`scripts/index.mjs` → `output/index.html`）。方式は**launchdに決定**: `com.winnow.daily`（毎朝07:00に `scripts/daily.sh` → `claude -p "/winnow"` headless実行、macOS通知）+ `com.winnow.serve`（serve.mjs常駐）。scheduled agentsはクラウド実行のためローカルDB/outputに書けず不採用 | **実装済み**（2026-07-08） |
 | **M3** | Cloudflare配信（**ハイブリッド構成**: 生成はローカルのまま、配信+フィードバック収集をクラウドへ）。https://winnow.tt-dev.workers.dev — **閲覧はWorkers Static Assetsによる公開静的サイト**（`output/` をそのままデプロイ、HTMLのみ公開・stories.json/report.mdは`.assetsignore`で遮断）、`cloud/` のHono Workerは認証付きフィードバックAPI（D1）のみ担当。`publish.mjs`=`wrangler deploy`、`sync-feedback.mjs` でクラウドの判定をローカルDBに還流 | **実装済み・デプロイ済み**（2026-07-08。当初のKV+認証付き配信から公開静的サイトに変更） |
 | **M4** | **フィードバックUIの統合とオーナー限定化**。2モード切替（読む/選り分ける）を廃止して単一ビュー+カード上のインラインアクション（★/✕）に統合。判定状態の永続表示と変更（§4.6）。`GET /api/feedback/state` 追加、Honoに `/login`・`/logout` のログイン導線を追加（オーナーのみ操作UIが表示される） | **実装済み**（2026-07-08） |
+| **M5** | **認証強化とアーカイブ索引の改善**。①`/auth?key=`・`?key=` クエリ認証を廃止（URLにキーが載る経路の根絶。認証は `X-Winnow-Key` ヘッダとセッションCookieのみ）。②Cookieを `__Host-wk` + **HMAC-SHA256署名付き30日トークン**（`<exp>.<sig>` 形式、生キー非含有、タイミングセーフ比較、残り7日でスライディング更新）に変更。③レポートフッターにログイン導線（閲覧モード=LOGIN / オーナー=LOGOUT、JSで出し分け）。④アーカイブ索引を刷新: 月別グルーピング+全レポート横断のインクリメンタル検索（見出し・topics・マクロ要約をAND検索、マッチ記事の提示付き、no-JSでもリスト閲覧可） | **実装済み**（2026-07-08） |
 
 フィードバックストアはSQLite（D1互換DDL）・受信はHTTP POSTで設計したため、M3はserve.mjsと同一コントラクトのWorker追加のみで成立した。item ID（§4.2のURL正規化仕様）は今後も不変とする。
 

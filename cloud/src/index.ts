@@ -15,8 +15,13 @@ type FeedbackPayload = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 const verdicts = new Set(['favorite', 'not_interested', 'skip', 'undo']);
-const cookieOptions = 'HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/';
+const sessionCookieName = '__Host-wk';
+const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
+const sessionDurationMs = sessionMaxAgeSeconds * 1000;
+const sessionRefreshWindowMs = 60 * 60 * 24 * 7 * 1000;
+const cookieOptions = `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${sessionMaxAgeSeconds}`;
 const clearCookieOptions = 'HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/';
+const tokenPrefix = 'winnow-session:';
 
 function cookieValue(header: string | undefined | null, name: string): string | null {
   if (!header) return null;
@@ -37,15 +42,60 @@ function validAuthKey(c: Context<{ Bindings: Bindings }>, key: string | undefine
   return Boolean(c.env.WINNOW_KEY && key === c.env.WINNOW_KEY);
 }
 
+function bytesToHex(bytes: ArrayBuffer): string {
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function sessionSignature(secret: string, exp: number): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(`${tokenPrefix}${exp}`));
+  return bytesToHex(sig);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+async function createSessionToken(secret: string, now = Date.now()): Promise<{ token: string; exp: number }> {
+  const exp = now + sessionDurationMs;
+  const sig = await sessionSignature(secret, exp);
+  return { token: `${exp}.${sig}`, exp };
+}
+
+async function verifySessionToken(secret: string, token: string | null, now = Date.now()): Promise<{ ok: true; exp: number } | { ok: false }> {
+  if (!token) return { ok: false };
+  const match = /^(\d+)\.([0-9a-f]+)$/i.exec(token);
+  if (!match) return { ok: false };
+  const exp = Number(match[1]);
+  const sig = match[2].toLowerCase();
+  if (!Number.isSafeInteger(exp) || exp <= now) return { ok: false };
+  const expected = await sessionSignature(secret, exp);
+  if (!timingSafeEqual(sig, expected)) return { ok: false };
+  return { ok: true, exp };
+}
+
+async function setSessionCookie(c: Context<{ Bindings: Bindings }>): Promise<void> {
+  const { token } = await createSessionToken(c.env.WINNOW_KEY);
+  c.header('Set-Cookie', `${sessionCookieName}=${encodeURIComponent(token)}; ${cookieOptions}`);
+}
+
 async function auth(c: Context<{ Bindings: Bindings }>, next: Next): Promise<Response | void> {
   if (c.req.path === '/api/health') return next();
   const headerKey = c.req.header('X-Winnow-Key');
-  const cookieKey = cookieValue(c.req.header('cookie'), 'wk');
-  const queryKey = c.req.query('key');
-  if (validAuthKey(c, headerKey) || validAuthKey(c, cookieKey)) return next();
-  if (validAuthKey(c, queryKey)) {
+  if (validAuthKey(c, headerKey)) return next();
+
+  const now = Date.now();
+  const cookieToken = cookieValue(c.req.header('cookie'), sessionCookieName);
+  const session = await verifySessionToken(c.env.WINNOW_KEY, cookieToken, now);
+  if (session.ok) {
     await next();
-    c.header('Set-Cookie', `wk=${encodeURIComponent(queryKey)}; ${cookieOptions}`);
+    if (session.exp - now < sessionRefreshWindowMs) await setSessionCookie(c);
     return;
   }
   return c.json({ error: 'unauthorized' }, 401);
@@ -111,7 +161,7 @@ app.post('/login', async (c) => {
   const form = await c.req.formData().catch(() => null);
   const key = String(form?.get('key') || '');
   if (validAuthKey(c, key)) {
-    c.header('Set-Cookie', `wk=${encodeURIComponent(key)}; ${cookieOptions}`);
+    await setSessionCookie(c);
     return c.redirect('/', 302);
   }
   await sleep(1000);
@@ -119,14 +169,7 @@ app.post('/login', async (c) => {
 });
 
 app.get('/logout', (c) => {
-  c.header('Set-Cookie', `wk=; ${clearCookieOptions}`);
-  return c.redirect('/', 302);
-});
-
-app.get('/auth', (c) => {
-  const key = c.req.query('key');
-  if (!validAuthKey(c, key)) return c.json({ error: 'unauthorized' }, 401);
-  c.header('Set-Cookie', `wk=${encodeURIComponent(key)}; ${cookieOptions}`);
+  c.header('Set-Cookie', `${sessionCookieName}=; ${clearCookieOptions}`);
   return c.redirect('/', 302);
 });
 

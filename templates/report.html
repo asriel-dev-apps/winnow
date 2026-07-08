@@ -109,6 +109,10 @@
     .fetch { margin:8px 0 0; padding:0; list-style:none; font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--ink-2); }
     .fetch li { display:flex; gap:10px; padding:4px 0; border-bottom:1px dashed var(--line); }
     .fetch .ok { color:var(--s-hatebu); } .fetch .ng { color:var(--s-reddit); }
+    .siteFooter { max-width:760px; margin:0 auto; padding:0 20px 34px; }
+    .authLink { display:none; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.14em; color:var(--muted); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+    .authLink:hover { color:var(--ink-2); text-decoration-color:var(--gold); }
+    .authLink.is-visible { display:inline-flex; }
 
     @media (max-width:520px) {
       body { font-size:15px; }
@@ -134,6 +138,9 @@
   <main>
     <section id="docMode"><!--__STATIC_DOCUMENT__--></section>
   </main>
+  <footer class="siteFooter">
+    <a class="authLink" id="authLink" href="/login">LOGIN</a>
+  </footer>
   <script>
     const data = /*__WINNOW_DATA__*/;
     const state = { feedback:{} };
@@ -142,6 +149,21 @@
 
     document.getElementById('runmeta').textContent = `${data.date || ''} · RUN ${data.run_id ?? ''} · ${(data.stories || []).length} STORIES`;
 
+    function setAuthLink(mode) {
+      const link = document.getElementById('authLink');
+      if (!link || location.protocol === 'file:') return;
+      if (mode === 'owner') {
+        link.href = '/logout';
+        link.textContent = 'LOGOUT';
+        link.classList.add('is-visible');
+      } else if (mode === 'viewer') {
+        link.href = '/login';
+        link.textContent = 'LOGIN';
+        link.classList.add('is-visible');
+      } else {
+        link.classList.remove('is-visible');
+      }
+    }
     function saveQueue(payload) {
       const q = JSON.parse(localStorage.getItem(queueKey) || '[]');
       q.push(payload);
@@ -217,6 +239,7 @@
     function enableOwnerMode(initialState) {
       state.feedback = {...initialState};
       document.body.classList.add('owner-mode');
+      setAuthLink('owner');
       const articles = [...document.querySelectorAll('article.story')];
       for (const [index, article] of articles.entries()) {
         const story = (data.stories || [])[index];
@@ -246,7 +269,10 @@
       }
       try {
         const res = await fetch(url);
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (res.status === 401) setAuthLink('viewer');
+          return;
+        }
         const body = await res.json();
         enableOwnerMode(body.state || {});
       } catch {
