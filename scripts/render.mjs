@@ -126,12 +126,21 @@ function releaseWatchHtml() {
   </section>`;
 }
 
+function rankingListHtml(entries) {
+  return `<ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>`;
+}
+
 function ossRankingHtml() {
-  const entries = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
-  if (!entries.length) return '';
+  const llm = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
+  const general = Array.isArray(data.oss_ranking_general) ? data.oss_ranking_general : [];
+  if (!llm.length && !general.length) return '';
+  const groups = [
+    llm.length ? `<div class="rankingGroup"><h3 class="rankingHead">LLM &amp; AGENTS</h3>${rankingListHtml(llm)}</div>` : '',
+    general.length ? `<div class="rankingGroup"><h3 class="rankingHead">TOOLS &amp; APPS</h3>${rankingListHtml(general)}</div>` : '',
+  ].join('');
   return `<section class="watchSection" id="rankingView">
     <p class="eyebrow">OSS RANKING</p>
-    <ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>
+    ${groups}
   </section>`;
 }
 
@@ -141,7 +150,8 @@ function watchSectionsHtml() {
 
 function renderContentTabs() {
   const hasReleaseWatch = Array.isArray(data.release_watch) && data.release_watch.length;
-  const hasOssRanking = Array.isArray(data.oss_ranking) && data.oss_ranking.length;
+  const hasOssRanking = (Array.isArray(data.oss_ranking) && data.oss_ranking.length)
+    || (Array.isArray(data.oss_ranking_general) && data.oss_ranking_general.length);
   if (!hasReleaseWatch && !hasOssRanking) return '';
   return `<div class="contentTabs" id="contentTabs" role="tablist" aria-label="Report sections">
         <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">SURVEY</button>
@@ -192,12 +202,20 @@ if (Array.isArray(data.release_watch) && data.release_watch.length) {
     md += `\n`;
   }
 }
-if (Array.isArray(data.oss_ranking) && data.oss_ranking.length) {
-  md += `## OSS RANKING\n\n`;
-  for (const entry of data.oss_ranking) {
-    md += `${entry.rank}. [${line(entry.repo)}](${entry.url})${entry.note ? ` — ${line(entry.note)}` : ''}\n`;
+{
+  const llmRank = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
+  const generalRank = Array.isArray(data.oss_ranking_general) ? data.oss_ranking_general : [];
+  if (llmRank.length || generalRank.length) {
+    md += `## OSS RANKING\n\n`;
+    for (const [heading, entries] of [['LLM & AGENTS', llmRank], ['TOOLS & APPS', generalRank]]) {
+      if (!entries.length) continue;
+      md += `### ${heading}\n\n`;
+      for (const entry of entries) {
+        md += `${entry.rank}. [${line(entry.repo)}](${entry.url})${entry.note ? ` — ${line(entry.note)}` : ''}\n`;
+      }
+      md += `\n`;
+    }
   }
-  md += `\n`;
 }
 md += `## 取得状況\n\n`;
 for (const status of data.fetch_status || []) {

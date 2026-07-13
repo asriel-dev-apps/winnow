@@ -32,6 +32,7 @@ function readEntries() {
       const stories = Array.isArray(data.stories) ? data.stories : [];
       const releaseWatch = Array.isArray(data.release_watch) ? data.release_watch : [];
       const ossRanking = Array.isArray(data.oss_ranking) ? data.oss_ranking : [];
+      const ossRankingGeneral = Array.isArray(data.oss_ranking_general) ? data.oss_ranking_general : [];
       return {
         date: String(data.date || entry.name),
         story_count: stories.length,
@@ -39,7 +40,8 @@ function readEntries() {
         macro_summary: firstMacroLine(data.macro_summary),
         watch_terms: [
           ...releaseWatch.flatMap((watch) => [watch.repo, ...(Array.isArray(watch.releases) ? watch.releases.map((release) => release.tag) : [])]),
-          ...ossRanking.map((ranking) => ranking.repo)
+          ...ossRanking.map((ranking) => ranking.repo),
+          ...ossRankingGeneral.map((ranking) => ranking.repo)
         ].map((value) => String(value || '')).filter(Boolean),
         stories: stories.map((story) => ({
           translated_title: String(story.translated_title || ''),
@@ -79,6 +81,7 @@ const html = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Winnow Archive</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 32 32%22%3E%3Crect width%3D%2232%22 height%3D%2232%22 rx%3D%227%22 fill%3D%22%2317181a%22%2F%3E%3Cpath d%3D%22M7 9L11.2 23L16 14.5L20.8 23L25 9%22 fill%3D%22none%22 stroke%3D%22%23e3b341%22 stroke-width%3D%222.6%22 stroke-linecap%3D%22round%22 stroke-linejoin%3D%22round%22%2F%3E%3Cline x1%3D%226.5%22 y1%3D%2223%22 x2%3D%2225.5%22 y2%3D%229%22 stroke%3D%22%23e3b341%22 stroke-width%3D%221.8%22 stroke-linecap%3D%22round%22 opacity%3D%22.85%22%2F%3E%3C%2Fsvg%3E">
   <style>
     :root {
       color-scheme: light dark;

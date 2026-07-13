@@ -139,14 +139,17 @@ run_step render node scripts/render.mjs "$smoke_out/stories.json"
 
 if grep -q 'RELEASE WATCH' "$smoke_out/report.html" &&
   grep -q 'OSS RANKING' "$smoke_out/report.html" &&
+  grep -q 'LLM &amp; AGENTS' "$smoke_out/report.html" &&
+  grep -q 'TOOLS &amp; APPS' "$smoke_out/report.html" &&
   grep -q 'anthropics/claude-code' "$smoke_out/report.html" &&
-  grep -q 'addyosmani/agent-skills' "$smoke_out/report.html"; then
+  grep -q 'addyosmani/agent-skills' "$smoke_out/report.html" &&
+  grep -q 'pocketbase/pocketbase' "$smoke_out/report.html"; then
   pass "watch_sections"
 else
   fail "watch_sections" "rendered HTML missing watch section headings or repo names"
 fi
 
-jq 'del(.release_watch, .oss_ranking)' "$smoke_out/stories.json" >"$tmpdir/stories-compat.json"
+jq 'del(.release_watch, .oss_ranking, .oss_ranking_general)' "$smoke_out/stories.json" >"$tmpdir/stories-compat.json"
 if node scripts/validate.mjs "$tmpdir/stories-compat.json" >"$tmpdir/compat-validate.out" 2>"$tmpdir/compat-validate.err" &&
   node scripts/render.mjs "$tmpdir/stories-compat.json" --out "$tmpdir/compat-render" >"$tmpdir/compat-render.out" 2>"$tmpdir/compat-render.err" &&
   ! grep -q 'RELEASE WATCH' "$tmpdir/compat-render/report.html" &&

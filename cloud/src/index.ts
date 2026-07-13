@@ -113,6 +113,7 @@ function loginPage(error = ''): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Winnow Login</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 32 32%22%3E%3Crect width%3D%2232%22 height%3D%2232%22 rx%3D%227%22 fill%3D%22%2317181a%22%2F%3E%3Cpath d%3D%22M7 9L11.2 23L16 14.5L20.8 23L25 9%22 fill%3D%22none%22 stroke%3D%22%23e3b341%22 stroke-width%3D%222.6%22 stroke-linecap%3D%22round%22 stroke-linejoin%3D%22round%22%2F%3E%3Cline x1%3D%226.5%22 y1%3D%2223%22 x2%3D%2225.5%22 y2%3D%229%22 stroke%3D%22%23e3b341%22 stroke-width%3D%221.8%22 stroke-linecap%3D%22round%22 opacity%3D%22.85%22%2F%3E%3C%2Fsvg%3E">
   <style>
     :root { color-scheme: light dark; --page:#f9f9f7; --card:#fcfcfb; --ink:#17181a; --ink-2:#52514e; --line:#e1e0d9; --gold:#c9920e; --gold-text:#7a5800; --gold-wash:rgba(201,146,14,.08); --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace; --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI",system-ui,-apple-system,"Segoe UI",sans-serif; }
     @media (prefers-color-scheme: dark) { :root { --page:#0d0d0d; --card:#1a1a19; --ink:#f2f2ef; --ink-2:#c3c2b7; --line:#2c2c2a; --gold:#e3b341; --gold-text:#e3b341; --gold-wash:rgba(227,179,65,.09); } }

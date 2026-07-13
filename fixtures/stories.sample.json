@@ -86,6 +86,14 @@
       "note": "MCP連携の実装例をまとめた基盤リポジトリです。"
     }
   ],
+  "oss_ranking_general": [
+    {
+      "rank": 1,
+      "repo": "pocketbase/pocketbase",
+      "url": "https://github.com/pocketbase/pocketbase",
+      "note": "1バイナリで動くGo製のバックエンドとして人気です。"
+    }
+  ],
   "fetch_status": [
     {"source": "hn", "ok": true, "count": 3, "note": "fixture"},
     {"source": "zenn", "ok": true, "count": 3, "note": "fixture"}

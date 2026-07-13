@@ -60,18 +60,21 @@ try {
       }
     }
   }
-  if (Object.hasOwn(data, 'oss_ranking')) {
-    if (!Array.isArray(data.oss_ranking)) {
-      errors.push(violation('oss_ranking', 'oss_ranking must be an array'));
-    } else {
-      if (data.oss_ranking.length > 10) errors.push(violation('oss_ranking', 'oss_ranking must have at most 10 entries'));
-      data.oss_ranking.forEach((entry, index) => {
-        if (Number(entry?.rank) !== index + 1) errors.push(violation('oss_ranking', 'oss_ranking rank must be sequential from 1'));
-        if (!nonEmpty(entry?.repo)) errors.push(violation('oss_ranking', 'oss_ranking entry repo must be non-empty'));
-        if (!nonEmpty(entry?.url)) errors.push(violation('oss_ranking', 'oss_ranking entry url must be non-empty'));
-      });
+  function validateRanking(key) {
+    if (!Object.hasOwn(data, key)) return;
+    if (!Array.isArray(data[key])) {
+      errors.push(violation(key, `${key} must be an array`));
+      return;
     }
+    if (data[key].length > 10) errors.push(violation(key, `${key} must have at most 10 entries`));
+    data[key].forEach((entry, index) => {
+      if (Number(entry?.rank) !== index + 1) errors.push(violation(key, `${key} rank must be sequential from 1`));
+      if (!nonEmpty(entry?.repo)) errors.push(violation(key, `${key} entry repo must be non-empty`));
+      if (!nonEmpty(entry?.url)) errors.push(violation(key, `${key} entry url must be non-empty`));
+    });
   }
+  validateRanking('oss_ranking');
+  validateRanking('oss_ranking_general');
   console.log(JSON.stringify(errors, null, 2));
   process.exit(errors.length === 0 ? 0 : 1);
 } catch (error) {
