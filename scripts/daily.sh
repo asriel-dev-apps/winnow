@@ -18,26 +18,29 @@ notify() {
 
 mkdir -p "$log_dir"
 cd "$root" || {
-  echo "[$(date -Is)] FAIL cd $root" >>"$log_file"
+  echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] FAIL cd $root" >>"$log_file"
   notify "Failed to enter repository"
   exit 1
 }
 
 if [[ -f "$log_file" ]] && grep -q "SUCCESS" "$log_file"; then
-  echo "[$(date -Is)] SKIP already successful today" >>"$log_file"
+  echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] SKIP already successful today" >>"$log_file"
   exit 0
 fi
 
-echo "[$(date -Is)] START" >>"$log_file"
-claude -p "/winnow" --permission-mode acceptEdits >>"$log_file" 2>&1
+echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] START" >>"$log_file"
+# モデルは明示する。既定モデルは変わることがあり、ヘッドレスで使えない
+# モデル（クレジット不足・組織で無効）に切り替わると毎朝失敗し続ける。
+# 2026-08-26〜08-31 に実際に起きた（既定が Fable 5 になりクレジット不足で 6 日連続 FAIL）。
+claude -p "/winnow" --model "${WINNOW_MODEL:-sonnet}" --permission-mode acceptEdits >>"$log_file" 2>&1
 status=$?
 
 if [[ "$status" -eq 0 ]]; then
-  echo "[$(date -Is)] SUCCESS $report_url" >>"$log_file"
+  echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] SUCCESS $report_url" >>"$log_file"
   notify "Survey complete: $report_url"
   exit 0
 fi
 
-echo "[$(date -Is)] FAIL exit=$status" >>"$log_file"
+echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] FAIL exit=$status" >>"$log_file"
 notify "Survey failed; see $log_file"
 exit "$status"
