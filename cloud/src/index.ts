@@ -44,7 +44,11 @@ async function ownerCheck(c: Context<Env>): Promise<{ ok: true } | { ok: false; 
     teamDomain: c.env.ACCESS_TEAM_DOMAIN,
     aud: c.env.ACCESS_AUD,
     ownerEmail: c.env.WINNOW_OWNER_EMAIL,
-  }, fetchCerts).catch((error) => ({ ok: false as const, reason: `verify error: ${error instanceof Error ? error.message : error}` }));
+  }, fetchCerts).catch((error) => {
+    // 例外の文言はログにだけ残し、画面には決まった理由コードしか出さない
+    console.warn('owner check error', { path: c.req.path, detail: error instanceof Error ? error.message : String(error) });
+    return { ok: false as const, reason: 'verify error' };
+  });
   if (!result.ok) console.warn('owner check failed', { path: c.req.path, reason: result.reason });
   return result.ok ? { ok: true } : result;
 }
