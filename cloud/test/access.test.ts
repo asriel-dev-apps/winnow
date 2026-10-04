@@ -74,6 +74,10 @@ test('verifyAccessJwt', async (t) => {
     await check(await sign(real.privateKey, 'k1', good));
     assert.equal(certFetches, 1);
     await check(await sign(real.privateKey, 'k9', good));
+    assert.equal(certFetches, 1, '取得直後は未知の kid でも取り直さない');
+    await verifyAccessJwt(await sign(real.privateKey, 'k9', good), config, fetchCerts, now + 61_000);
+    assert.equal(certFetches, 2, '間隔を空ければ取り直す');
+    await verifyAccessJwt(await sign(real.privateKey, 'k9', good), config, fetchCerts, now + 62_000);
     assert.equal(certFetches, 2);
   });
 });

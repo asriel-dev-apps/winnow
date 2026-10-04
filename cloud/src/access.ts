@@ -11,6 +11,8 @@ type Jwk = JsonWebKey & { kid?: string };
 export type FetchCerts = (url: string) => Promise<{ keys: Jwk[] }>;
 
 const certsTtlMs = 60 * 60 * 1000;
+// 未知の kid による取り直しは間隔を空ける。でたらめな kid を付けた要求で外部取得を連打させないため
+const certsRefreshCooldownMs = 60 * 1000;
 let certsCache: { url: string; keys: Jwk[]; at: number } | null = null;
 
 function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
@@ -59,7 +61,7 @@ export async function verifyAccessJwt(
   const certsUrl = `${teamDomain}/cdn-cgi/access/certs`;
   let keys = await certs(certsUrl, fetchCerts, now, false);
   let jwk = keys.find((k) => k.kid === header.kid);
-  if (!jwk) {
+  if (!jwk && (!certsCache || now - certsCache.at >= certsRefreshCooldownMs)) {
     // 鍵の入れ替え直後はキャッシュに新しい kid が無い
     keys = await certs(certsUrl, fetchCerts, now, true);
     jwk = keys.find((k) => k.kid === header.kid);

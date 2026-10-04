@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { verifyAccessJwt } from './access';
 import type { FetchCerts } from './access';
+import { safeReturnPath } from './return-path';
 
 type Bindings = {
   DB: D1Database;
@@ -69,9 +70,6 @@ async function ownerOrSyncKey(c: Context<Env>, next: Next): Promise<Response | v
   return ownerOnly(c, next);
 }
 
-function safeReturnPath(value: string | undefined): string {
-  return value && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/';
-}
 
 function validateFeedback(body: FeedbackPayload): { ok: true; runId: number; clusterId: string; itemIds: string[]; verdict: string } | { ok: false } {
   const runId = Number(body.run_id);
