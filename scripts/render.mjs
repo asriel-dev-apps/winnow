@@ -133,7 +133,7 @@ function cloudflareEntries(kind) {
   return Array.isArray(watch[kind]) ? watch[kind] : [];
 }
 
-const CLOUDFLARE_KINDS = { agent: 'AI エージェント', platform: 'Workers 基盤', pricing: '料金に影響', security: 'セキュリティ' };
+const CLOUDFLARE_KINDS = { agent: 'AI', platform: 'Workers 基盤', pricing: '料金に影響', security: 'セキュリティ' };
 
 function cloudflareHighlights() {
   const highlights = (data.cloudflare_watch || {}).highlights;
