@@ -177,6 +177,15 @@
     .cfStep.ng { border-color:color-mix(in srgb, #d14b3d 55%, transparent); background:color-mix(in srgb, #d14b3d 7%, transparent); }
     .cfStep.ok { border-color:color-mix(in srgb, #2f9461 55%, transparent); background:color-mix(in srgb, #2f9461 7%, transparent); }
     .cfArrow { flex:none; align-self:center; color:var(--muted); font-style:normal; }
+    /* ダークでは 7% の色付けがほぼ黒に沈むので、箱を明るく・色を濃くする */
+    @media (prefers-color-scheme: dark) {
+      .cfStep { background:#2a2a28; border-color:#4a4a46; }
+      .cfStep small { color:#d6d5cc; }
+      .cfStep.ng { background:#4a2622; border-color:#e0705f; }
+      .cfStep.ok { background:#1f4232; border-color:#4fbf87; }
+      .cfRow.ng { color:#f08a7a; } .cfRow.ok { color:#5fd197; }
+      .cfArrow { color:#b5b4ab; }
+    }
     .cfArrow::before { content:"→"; }
     .cfStats { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:8px; margin:6px 0 4px; }
     .cfStats div { background:var(--gold-wash); border-radius:10px; padding:10px 12px; }
