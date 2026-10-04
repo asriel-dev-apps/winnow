@@ -33,9 +33,9 @@ echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] START" >>"$log_file"
 # モデル（クレジット不足・組織で無効）に切り替わると毎朝失敗し続ける。
 # 2026-08-26〜08-31 に実際に起きた（既定が Fable 5 になりクレジット不足で 6 日連続 FAIL）。
 #
-# `opus` エイリアスは Opus 5 を指すので使わない（2026-08-31 実測）。
-# Opus 4.8 を使うには完全な ID が要る。`opus-4.8` は未認識で弾かれる。
-claude -p "/winnow" --model "${WINNOW_MODEL:-claude-opus-4-8}" --permission-mode acceptEdits >>"$log_file" 2>&1
+# エイリアス（`opus`）は指す先が黙って変わるので、完全な ID で固定する。
+# claude-opus-5-5 がヘッドレスで通ることは 2026-10-04 に実測。
+claude -p "/winnow" --model "${WINNOW_MODEL:-claude-opus-5-5}" --permission-mode acceptEdits >>"$log_file" 2>&1
 status=$?
 
 if [[ "$status" -eq 0 ]]; then
