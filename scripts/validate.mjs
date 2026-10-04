@@ -73,6 +73,21 @@ try {
       if (!nonEmpty(entry?.url)) errors.push(violation(key, `${key} entry url must be non-empty`));
     });
   }
+  if (Object.hasOwn(data, 'cloudflare_watch')) {
+    const watch = data.cloudflare_watch;
+    if (!watch || typeof watch !== 'object' || Array.isArray(watch)) {
+      errors.push(violation('cloudflare_watch', 'cloudflare_watch must be an object'));
+    } else {
+      for (const [kind, entries] of Object.entries(watch)) {
+        if (!['blog', 'changelog'].includes(kind)) errors.push(violation('cloudflare_watch', `cloudflare_watch has unknown key: ${kind}`));
+        else if (!Array.isArray(entries)) errors.push(violation('cloudflare_watch', `cloudflare_watch.${kind} must be an array`));
+        else for (const entry of entries) {
+          if (!nonEmpty(entry?.title)) errors.push(violation('cloudflare_watch', `cloudflare_watch.${kind} entry title must be non-empty`));
+          if (!nonEmpty(entry?.url)) errors.push(violation('cloudflare_watch', `cloudflare_watch.${kind} entry url must be non-empty`));
+        }
+      }
+    }
+  }
   validateRanking('oss_ranking');
   validateRanking('oss_ranking_general');
   console.log(JSON.stringify(errors, null, 2));

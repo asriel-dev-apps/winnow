@@ -143,17 +143,21 @@ if grep -q 'RELEASE WATCH' "$smoke_out/report.html" &&
   grep -q 'TOOLS &amp; APPS' "$smoke_out/report.html" &&
   grep -q 'anthropics/claude-code' "$smoke_out/report.html" &&
   grep -q 'addyosmani/agent-skills' "$smoke_out/report.html" &&
-  grep -q 'pocketbase/pocketbase' "$smoke_out/report.html"; then
+  grep -q 'pocketbase/pocketbase' "$smoke_out/report.html" &&
+  grep -q 'CLOUDFLARE OFFICIAL' "$smoke_out/report.html" &&
+  grep -q 'data-tab="cloudflare"' "$smoke_out/report.html" &&
+  grep -q 'Introducing Web Search API via AI Gateway' "$smoke_out/report.html"; then
   pass "watch_sections"
 else
   fail "watch_sections" "rendered HTML missing watch section headings or repo names"
 fi
 
-jq 'del(.release_watch, .oss_ranking, .oss_ranking_general)' "$smoke_out/stories.json" >"$tmpdir/stories-compat.json"
+jq 'del(.release_watch, .cloudflare_watch, .oss_ranking, .oss_ranking_general)' "$smoke_out/stories.json" >"$tmpdir/stories-compat.json"
 if node scripts/validate.mjs "$tmpdir/stories-compat.json" >"$tmpdir/compat-validate.out" 2>"$tmpdir/compat-validate.err" &&
   node scripts/render.mjs "$tmpdir/stories-compat.json" --out "$tmpdir/compat-render" >"$tmpdir/compat-render.out" 2>"$tmpdir/compat-render.err" &&
   ! grep -q 'RELEASE WATCH' "$tmpdir/compat-render/report.html" &&
-  ! grep -q 'OSS RANKING' "$tmpdir/compat-render/report.html"; then
+  ! grep -q 'OSS RANKING' "$tmpdir/compat-render/report.html" &&
+  ! grep -q 'CLOUDFLARE OFFICIAL' "$tmpdir/compat-render/report.html"; then
   pass "watch_backward_compat"
 else
   fail "watch_backward_compat" "$(cat "$tmpdir/compat-validate.err" "$tmpdir/compat-render.err" 2>/dev/null)"
@@ -169,12 +173,21 @@ cat >"$tmpdir/raw-release.json" <<'JSON'
     "published_at": "2026-07-07T02:00:00Z",
     "engagement": {},
     "raw_tags": ["github-release", "openai/codex"]
+  },
+  {
+    "source": "cloudflare",
+    "url": "https://blog.cloudflare.com/introducing-web-search-api/",
+    "title": "Introducing Web Search API via AI Gateway",
+    "author": null,
+    "published_at": "2026-10-02T13:00:00Z",
+    "engagement": {},
+    "raw_tags": ["cloudflare-official", "cloudflare-blog", "AI Gateway"]
   }
 ]
 JSON
 if node scripts/ingest.mjs ingest "$tmpdir/raw-release.json" >"$tmpdir/release-ingest.out" 2>"$tmpdir/release-ingest.err" &&
   node scripts/ingest.mjs candidates --run "$run_id" >"$tmpdir/release-candidates.out" 2>"$tmpdir/release-candidates.err" &&
-  jq -e '.candidates | all(.raw_tags | index("github-release") | not)' "$tmpdir/release-candidates.out" >/dev/null; then
+  jq -e '.candidates | all(.raw_tags | (index("github-release") or index("cloudflare-official")) | not)' "$tmpdir/release-candidates.out" >/dev/null; then
   pass "release_excluded"
 else
   fail "release_excluded" "$(cat "$tmpdir/release-ingest.err" "$tmpdir/release-candidates.err" "$tmpdir/release-candidates.out" 2>/dev/null)"

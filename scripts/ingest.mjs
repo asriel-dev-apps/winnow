@@ -267,7 +267,10 @@ function commandCandidates(args) {
   if (idx === -1 || !args[idx + 1]) throw new Error('usage: ingest.mjs candidates --run <id>');
   const runId = Number(args[idx + 1]);
   const rows = db.prepare('SELECT * FROM items WHERE last_shown_run IS NULL ORDER BY published_at DESC, title ASC').all();
-  const storyRows = rows.filter((row) => !parseJsonArray(row.raw_tags_json).includes('github-release'));
+  const storyRows = rows.filter((row) => {
+    const tags = parseJsonArray(row.raw_tags_json);
+    return !tags.includes('github-release') && !tags.includes('cloudflare-official');
+  });
   const bySource = new Map();
   for (const row of storyRows) {
     if (!bySource.has(row.source)) bySource.set(row.source, []);

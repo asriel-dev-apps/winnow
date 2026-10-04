@@ -21,7 +21,7 @@ description: 技術記事サーベイダイジェスト生成。Hacker News / Ze
 
 ```bash
 mkdir -p /tmp/winnow-raw && cd $ROOT
-for s in hn zenn qiita hatebu ghtrend reddit lobsters agents; do
+for s in hn zenn qiita hatebu ghtrend reddit lobsters agents cloudflare; do
   scripts/fetch/$s.sh > /tmp/winnow-raw/$s.json 2>/tmp/winnow-raw/$s.err &
 done; wait
 ```
@@ -43,7 +43,7 @@ candidatesの出力にはスワイプ履歴から導出した学習プロファ�
 
 `$ROOT/config/interests.yaml` を読み、候補リストに対して:
 
-1. **クラスタリング**: 同一トピックを扱うitemを1つの「ストーリー」に束ねる（cluster_id: s01, s02, …）。なお `github-release` タグのitemは候補から自動除外されている（定点ウォッチで扱う）。またステップ4.5でOSS RANKINGに載せるリポジトリは、特筆すべき文脈がない限りストーリーにはしない（重複回避）
+1. **クラスタリング**: 同一トピックを扱うitemを1つの「ストーリー」に束ねる（cluster_id: s01, s02, …）。なお `github-release` / `cloudflare-official` タグのitemは候補から自動除外されている（定点ウォッチで扱う）。またステップ4.5でOSS RANKINGに載せるリポジトリは、特筆すべき文脈がない限りストーリーにはしない（重複回避）
 2. **match_score付与**（0–100）: 興味プロファイルとの合致度。`focus` 該当は高スコア、`exclude` 該当は掲載対象外。学習プロファイルがあれば加味する（明示プロファイルが優先）
 3. **選別**: 複合スコア = round(0.7×match + 0.3×quality) が **55以上** の上位 **最大15ストーリー**（通常枠）
 4. **セレンディピティ枠**（学習プロファイルが存在する場合のみ）: match<40 かつ quality≥80 から最大2件を外数で追加し `is_serendipity: true`
@@ -62,9 +62,10 @@ candidatesの出力にはスワイプ履歴から導出した学習プロファ�
 
 ### 4.5 定点ウォッチの生成（あなたの仕事 その3）
 
-stories.json に任意ブロック2つを追加する（データが無ければ省略可）:
+stories.json に任意ブロックを追加する（データが無ければ省略可）:
 
 - **`release_watch`**: `/tmp/winnow-raw/agents.json` の `raw_tags` に `github-release` を含むitemから生成。**リポジトリごとに別entry**（claude-codeとcodexを混ぜない）。各リリースは新しい順に最大5件、`notes_summary` は item の `notes`（リリースノート本文）から**変更内容を1〜2文の日本語で要約**（notesが空なら notes_summary は省略）
+- **`cloudflare_watch`**: `/tmp/winnow-raw/cloudflare.json`（Cloudflare公式。`raw_tags` の `cloudflare-blog` / `cloudflare-changelog` で振り分け）から `{"blog": [...], "changelog": [...]}` を生成。**興味スコアで絞らず全件を新しい順に載せる**（ユーザーがCloudflare公式の最新情報を常に見たいため）。各entryは `title`（原題のまま）・`url`・`published_at`・`summary`（item の `notes` から**何が変わった/発表されたかを1〜2文の日本語で**。notesが空なら省略）
 - **`oss_ranking`（LLM & AGENTS）** と **`oss_ranking_general`（TOOLS & APPS）**: `/tmp/winnow-raw/ghtrend.json` の各リポジトリを、`config/sources.json` の `ranking_keywords` にリポジトリ名または `description` がマッチ（大文字小文字無視）するかで振り分ける。**マッチ → `oss_ranking`**（LLM・エージェント系）、**非マッチ → `oss_ranking_general`**（ツール・CLI・アプリ等の汎用トレンド）。**それぞれトレンド順のまま最大10件**、`rank` は各配列で1から独立に連番、`note` は description を踏まえた1行の日本語説明。どちらか一方が0件ならそのキーは省略してよい
 
 結果を `output/YYYY-MM-DD/stories.json` に書く。スキーマはREQUIREMENTS.md §5.1に厳密に従う（`run_id` はstep 2の値）。
@@ -91,5 +92,5 @@ open http://127.0.0.1:${WINNOW_PORT:-8765}/YYYY-MM-DD/report.html
 ### 7. ユーザーへの報告
 
 - マクロ要約3行、掲載ストーリー数（うちセレンディピティ数）、取得状況（失敗ソースがあれば明記）、レポートURL（ローカル + publishが成功していればクラウドURL）を簡潔に報告する
-- report.md も SendUserFile で添付する
+- report.md も添付する。SendUserFile が使える環境ならそれで送り、無い環境（Claude Code CLIなど）では `output/YYYY-MM-DD/report.md` のパスを報告に書く
 - レポート上の★/✕ボタンで判定すると次回の選別に反映される（オーナーのみ表示）ことを一言添える（初回のみ）

@@ -203,20 +203,18 @@
       const views = {
         survey: [hero, ...stories, fetchwrap].filter(Boolean),
         releases: [document.getElementById('releaseView')].filter(Boolean),
+        cloudflare: [document.getElementById('cloudflareView')].filter(Boolean),
         ranking: [document.getElementById('rankingView')].filter(Boolean),
       };
-      const available = new Set(['survey']);
-      if (views.releases.length) available.add('releases');
-      if (views.ranking.length) available.add('ranking');
+      const available = new Set(Object.keys(views).filter((name) => name === 'survey' || views[name].length));
       for (const button of buttons) {
         if (!available.has(button.dataset.tab)) button.hidden = true;
       }
       if (tabs && available.size > 1) tabs.classList.add('is-visible');
 
       function routeFromHash() {
-        if (location.hash === '#releases') return available.has('releases') ? 'releases' : 'survey';
-        if (location.hash === '#ranking') return available.has('ranking') ? 'ranking' : 'survey';
-        return 'survey';
+        const view = location.hash.slice(1);
+        return view !== 'survey' && available.has(view) ? view : 'survey';
       }
       function setVisible(view, shouldScroll) {
         for (const [name, elements] of Object.entries(views)) {
@@ -235,7 +233,7 @@
           setVisible('survey', shouldScroll);
           return;
         }
-        const hash = next === 'releases' ? '#releases' : '#ranking';
+        const hash = `#${next}`;
         if (location.hash === hash) setVisible(next, shouldScroll);
         else location.hash = hash;
       }

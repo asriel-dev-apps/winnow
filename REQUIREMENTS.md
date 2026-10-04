@@ -250,13 +250,17 @@ itemの**有効判定**は「`decided_at` が最新のイベントのverdict。�
     {"repo": "anthropics/claude-code",
      "releases": [{"tag": "v1.2.3", "url": "…", "published_at": "ISO8601", "notes_summary": "変更点1〜2文(任意)"}]}
   ],
+  "cloudflare_watch": {
+    "blog":      [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}],
+    "changelog": [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}]
+  },
   "oss_ranking":         [{"rank": 1, "repo": "owner/name", "url": "…", "note": "1行説明(任意)"}],
   "oss_ranking_general": [{"rank": 1, "repo": "owner/name", "url": "…", "note": "1行説明(任意)"}],
   "fetch_status": [{"source": "reddit", "ok": false, "count": 0, "note": "403"}]
 }
 ```
 
-`release_watch` / `oss_ranking`（LLM & AGENTS）/ `oss_ranking_general`（TOOLS & APPS）は任意ブロック（§4.5・M6）。データが無ければキーごと省略する。
+`release_watch` / `cloudflare_watch`（Cloudflare公式のブログ・changelog）/ `oss_ranking`（LLM & AGENTS）/ `oss_ranking_general`（TOOLS & APPS）は任意ブロック（§4.5・M6）。データが無ければキーごと省略する。
 
 このスキーマはM3のWorker差し替え時も互換性検証の基準とする。
 

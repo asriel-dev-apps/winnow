@@ -72,6 +72,14 @@
       ]
     }
   ],
+  "cloudflare_watch": {
+    "blog": [
+      {"title": "Introducing Web Search API via AI Gateway", "url": "https://blog.cloudflare.com/introducing-web-search-api/", "published_at": "2026-10-02T13:00:00Z", "summary": "AI GatewayからWeb検索APIを呼べるようになりました。"}
+    ],
+    "changelog": [
+      {"title": "Workers - Example changelog entry", "url": "https://developers.cloudflare.com/changelog/", "published_at": "2026-10-02T00:00:00Z"}
+    ]
+  },
   "oss_ranking": [
     {
       "rank": 1,

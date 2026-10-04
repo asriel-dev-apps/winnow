@@ -126,6 +126,25 @@ function releaseWatchHtml() {
   </section>`;
 }
 
+const CLOUDFLARE_GROUPS = [['blog', 'BLOG'], ['changelog', 'CHANGELOG']];
+
+function cloudflareEntries(kind) {
+  const watch = data.cloudflare_watch || {};
+  return Array.isArray(watch[kind]) ? watch[kind] : [];
+}
+
+function cloudflareWatchHtml() {
+  const groups = CLOUDFLARE_GROUPS.filter(([kind]) => cloudflareEntries(kind).length);
+  if (!groups.length) return '';
+  return `<section class="watchSection" id="cloudflareView">
+    <p class="eyebrow">CLOUDFLARE OFFICIAL</p>
+    <div class="watchCards">${groups.map(([kind, label]) => `<article class="watchCard">
+        <h3 class="watchRepo">${label}</h3>
+        <ul class="watchList">${cloudflareEntries(kind).map((entry) => `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.title)}</a>${entry.published_at ? ` <span class="watchDate">${esc(formatDate(entry.published_at))}</span>` : ''}${entry.summary ? `<p>${esc(entry.summary)}</p>` : ''}</li>`).join('')}</ul>
+      </article>`).join('')}</div>
+  </section>`;
+}
+
 function rankingListHtml(entries) {
   return `<ol class="rankingList">${entries.map((entry) => `<li value="${esc(entry.rank)}"><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.repo)}</a>${entry.note ? ` <span class="rankNote">— ${esc(entry.note)}</span>` : ''}</li>`).join('')}</ol>`;
 }
@@ -145,17 +164,19 @@ function ossRankingHtml() {
 }
 
 function watchSectionsHtml() {
-  return releaseWatchHtml() + ossRankingHtml();
+  return releaseWatchHtml() + cloudflareWatchHtml() + ossRankingHtml();
 }
 
 function renderContentTabs() {
   const hasReleaseWatch = Array.isArray(data.release_watch) && data.release_watch.length;
   const hasOssRanking = (Array.isArray(data.oss_ranking) && data.oss_ranking.length)
     || (Array.isArray(data.oss_ranking_general) && data.oss_ranking_general.length);
-  if (!hasReleaseWatch && !hasOssRanking) return '';
+  const hasCloudflare = CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length);
+  if (!hasReleaseWatch && !hasOssRanking && !hasCloudflare) return '';
   return `<div class="contentTabs" id="contentTabs" role="tablist" aria-label="Report sections">
         <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">SURVEY</button>
         ${hasReleaseWatch ? '<button class="contentTab" type="button" role="tab" data-tab="releases" aria-selected="false">RELEASES</button>' : ''}
+        ${hasCloudflare ? '<button class="contentTab" type="button" role="tab" data-tab="cloudflare" aria-selected="false">CLOUDFLARE</button>' : ''}
         ${hasOssRanking ? '<button class="contentTab" type="button" role="tab" data-tab="ranking" aria-selected="false">RANKING</button>' : ''}
       </div>`;
 }
@@ -198,6 +219,20 @@ if (Array.isArray(data.release_watch) && data.release_watch.length) {
       const date = release.published_at ? ` / ${line(formatDate(release.published_at))}` : '';
       const notes = release.notes_summary ? ` — ${line(release.notes_summary)}` : '';
       md += `- [${line(release.tag)}](${release.url})${date}${notes}\n`;
+    }
+    md += `\n`;
+  }
+}
+if (CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length)) {
+  md += `## CLOUDFLARE OFFICIAL\n\n`;
+  for (const [kind, label] of CLOUDFLARE_GROUPS) {
+    const entries = cloudflareEntries(kind);
+    if (!entries.length) continue;
+    md += `### ${label}\n\n`;
+    for (const entry of entries) {
+      const date = entry.published_at ? ` / ${line(formatDate(entry.published_at))}` : '';
+      const summary = entry.summary ? ` — ${line(entry.summary)}` : '';
+      md += `- [${line(entry.title)}](${entry.url})${date}${summary}\n`;
     }
     md += `\n`;
   }
