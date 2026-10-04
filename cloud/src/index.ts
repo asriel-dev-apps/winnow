@@ -39,13 +39,18 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-async function isOwner(c: Context<Env>): Promise<boolean> {
+async function ownerCheck(c: Context<Env>): Promise<{ ok: true } | { ok: false; reason: string }> {
   const result = await verifyAccessJwt(c.req.header('Cf-Access-Jwt-Assertion'), {
     teamDomain: c.env.ACCESS_TEAM_DOMAIN,
     aud: c.env.ACCESS_AUD,
     ownerEmail: c.env.WINNOW_OWNER_EMAIL,
-  }, fetchCerts).catch(() => ({ ok: false as const, reason: 'verify error' }));
-  return result.ok;
+  }, fetchCerts).catch((error) => ({ ok: false as const, reason: `verify error: ${error instanceof Error ? error.message : error}` }));
+  if (!result.ok) console.warn('owner check failed', { path: c.req.path, reason: result.reason });
+  return result.ok ? { ok: true } : result;
+}
+
+async function isOwner(c: Context<Env>): Promise<boolean> {
+  return (await ownerCheck(c)).ok;
 }
 
 // ブラウザのオーナーは Access の JWT だけで認める。鍵(X-Winnow-Key)は毎朝の同期スクリプト用で、export にしか効かない
@@ -78,7 +83,9 @@ app.get('/login', async (c) => {
   if (new URL(c.req.url).hostname !== c.env.CANONICAL_HOST) {
     return c.redirect(`https://${c.env.CANONICAL_HOST}/login?return=${encodeURIComponent(returnTo)}`, 302);
   }
-  if (!(await isOwner(c))) return c.text('forbidden', 403);
+  const check = await ownerCheck(c);
+  // 理由は秘密を含まない(no token / wrong aud など)。ログイン失敗の切り分けに画面へ出す
+  if (!check.ok) return c.text(`forbidden (${check.reason})`, 403);
   return c.redirect(returnTo, 302);
 });
 
