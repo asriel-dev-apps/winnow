@@ -15,17 +15,16 @@ description: 技術記事サーベイダイジェスト生成。Hacker News / Ze
 
 ## 実行手順
 
-### 1. 収集（並列）
+### 1. 収集
 
-`$ROOT/scripts/fetch/` の各スクリプトを並列実行し、出力を一時ディレクトリに保存する:
+`$ROOT/scripts/fetch/` の各スクリプトを `$ROOT/.raw/`（git管理外）に出力する。Bashツールのサンドボックスは `/tmp` への書き込み・`&` の並列・`$s` を展開するループを拒否するので、ソース名をリテラルで書き、`;` で順に実行する:
 
 ```bash
-mkdir -p /tmp/winnow-raw && cd $ROOT
-for s in hn zenn qiita hatebu ghtrend reddit lobsters agents cloudflare; do
-  scripts/fetch/$s.sh > /tmp/winnow-raw/$s.json 2>/tmp/winnow-raw/$s.err &
-done; wait
+cd $ROOT; mkdir -p .raw; scripts/fetch/hn.sh > .raw/hn.json 2>.raw/hn.err; echo "hn exit=$?"; scripts/fetch/zenn.sh > .raw/zenn.json 2>.raw/zenn.err; echo "zenn exit=$?"
+# 同じ形で qiita hatebu ghtrend reddit lobsters agents cloudflare
 ```
 
+- zenn は exit 141（SIGPIPE）を返すことがある。出力が妥当なJSONなら成功として扱う
 - 骨格ソース（hn, zenn, qiita, hatebu）が**4つとも失敗**した場合のみエラー終了し、ユーザーに報告する
 - それ以外の失敗はスキップし、ソース名と失敗理由を控えておく（stories.jsonの `fetch_status` に記録する）
 
@@ -33,8 +32,14 @@ done; wait
 
 ```bash
 node scripts/sync-feedback.mjs                             # クラウドのスワイプ判定を取り込む(未設定ならスキップ)
-node scripts/ingest.mjs ingest /tmp/winnow-raw/*.json      # → run_id が出力される
-node scripts/ingest.mjs candidates --run <run_id>          # → 候補JSON(quality_score付き) + learned_profile
+node scripts/ingest.mjs ingest .raw/hn.json .raw/zenn.json …  # 9ファイルを列挙 → run_id が出力される
+node scripts/ingest.mjs candidates --run <run_id> > .raw/cand.json  # → 候補JSON(quality_score付き) + learned_profile
+```
+
+`candidates` は `--run` で絞らず、未表示の全item（数千件）を返す。今回の `.raw/*.json`（agents・cloudflare 以外）にある URL の集合と突き合わせて絞ってから読む:
+
+```bash
+jq -s '(.[0:7]|add|map(.url)) as $u | .[7].candidates | map(select(.url as $x | $u|index($x)))' .raw/hn.json .raw/zenn.json .raw/qiita.json .raw/hatebu.json .raw/ghtrend.json .raw/reddit.json .raw/lobsters.json .raw/cand.json > .raw/today.json
 ```
 
 candidatesの出力にはスワイプ履歴から導出した学習プロファイル（`learned_profile`、判定が無ければnull）が含まれる。
@@ -64,8 +69,8 @@ candidatesの出力にはスワイプ履歴から導出した学習プロファ�
 
 stories.json に任意ブロックを追加する（データが無ければ省略可）:
 
-- **`release_watch`**: `/tmp/winnow-raw/agents.json` の `raw_tags` に `github-release` を含むitemから生成。**リポジトリごとに別entry**（claude-codeとcodexを混ぜない）。各リリースは新しい順に最大5件、`notes_summary` は item の `notes`（リリースノート本文）から**変更内容を1〜2文の日本語で要約**（notesが空なら notes_summary は省略）
-- **`cloudflare_watch`**: `/tmp/winnow-raw/cloudflare.json`（Cloudflare公式。`raw_tags` の `cloudflare-blog` / `cloudflare-changelog` で振り分け）から `{"blog": [...], "changelog": [...]}` を生成。**興味スコアで絞らず全件を新しい順に載せる**（ユーザーがCloudflare公式の最新情報を常に見たいため）。各entryは `title`（原題のまま）・`url`・`published_at`・`summary`（item の `notes` から書く。notesが空なら省略）。summary は**専門外の人にも通じる平易な日本語1〜2文**で、次の3点を必ず含める: ①何ができるようになったか ②なぜ作られたか（どんな困りごとを解決するのか） ③何に・どう使うか（具体的な使い道）。製品名以外のカタカナ語・略語を並べない。notesに②が書かれていなければ推測で埋めず、①と③だけにする
+- **`release_watch`**: `.raw/agents.json` の `raw_tags` に `github-release` を含むitemから生成。**リポジトリごとに別entry**（claude-codeとcodexを混ぜない）。各リリースは新しい順に最大5件、`notes_summary` は item の `notes`（リリースノート本文）から**変更内容を1〜2文の日本語で要約**（notesが空なら notes_summary は省略）
+- **`cloudflare_watch`**: `.raw/cloudflare.json`（Cloudflare公式。`raw_tags` の `cloudflare-blog` / `cloudflare-changelog` で振り分け）から `{"blog": [...], "changelog": [...]}` を生成。**興味スコアで絞らず全件を新しい順に載せる**（ユーザーがCloudflare公式の最新情報を常に見たいため）。各entryは `title`（原題のまま）・`url`・`published_at`・`summary`（item の `notes` から書く。notesが空なら省略）。summary は**専門外の人にも通じる平易な日本語1〜2文**で、次の3点を必ず含める: ①何ができるようになったか ②なぜ作られたか（どんな困りごとを解決するのか） ③何に・どう使うか（具体的な使い道）。製品名以外のカタカナ語・略語を並べない。notesに②が書かれていなければ推測で埋めず、①と③だけにする
   - さらに `highlights`（**最大5件**）を作り、図で見せる。**全件が候補**で、5件を超えるときだけ次の順に外していく（1から先に外す。5件以下ならどれも外さない）:
     1. 使い方が何も変わらない発表 — 会社の取り組み・寄付・事例集・速度ランキング・方針表明
     2. ネットワーク管理・社内セキュリティ向けの細かい設定変更 — Zero Trust / Access / Tunnel の権限や挙動、WAF・Rules の式の関数追加など（緊急の脆弱性対応は外さない）
@@ -75,7 +80,7 @@ stories.json に任意ブロックを追加する（データが無ければ省�
   - 各highlight: `title`（原題）・`url`・`product`（製品名）・`kind`（`agent`=AI（モデル・エージェント・AI 系サービス） / `platform`=Workers基盤 / `pricing`=料金に影響 / `security`）・`headline`（何が変わるかを言い切る日本語見出し。例「利用者が画面を閉じても、処理が最後まで続く」）・`use`（使いどころ等1〜3行の配列）・任意で `warn`（料金開始日など、行動が要る注意1文）
   - **図（文章より図が主）**: 次の少なくとも1つを入れる。`before`/`after` = 処理の流れを2〜4段の `[{"label": "短い名詞", "note": "補足(任意)"}]` で（before=これまで・after=これから。新しい仕組みだけなら after のみ）。`stats` = 記事中の数値 `[{"value": "0.25 秒", "label": "書き込みが全拠点に届くまで"}]`（2〜3個、記事に無い数値を作らない）
   - highlightに選んだ記事も `blog`/`changelog` には残してよい（表示時に「ほかの発表」から自動で除かれる）
-- **`oss_ranking`（LLM & AGENTS）** と **`oss_ranking_general`（TOOLS & APPS）**: `/tmp/winnow-raw/ghtrend.json` の各リポジトリを、`config/sources.json` の `ranking_keywords` にリポジトリ名または `description` がマッチ（大文字小文字無視）するかで振り分ける。**マッチ → `oss_ranking`**（LLM・エージェント系）、**非マッチ → `oss_ranking_general`**（ツール・CLI・アプリ等の汎用トレンド）。**それぞれトレンド順のまま最大10件**、`rank` は各配列で1から独立に連番、`note` は description を踏まえた1行の日本語説明。どちらか一方が0件ならそのキーは省略してよい
+- **`oss_ranking`（LLM & AGENTS）** と **`oss_ranking_general`（TOOLS & APPS）**: `.raw/ghtrend.json` の各リポジトリを、`config/sources.json` の `ranking_keywords` にリポジトリ名または `description` がマッチ（大文字小文字無視）するかで振り分ける。**マッチ → `oss_ranking`**（LLM・エージェント系）、**非マッチ → `oss_ranking_general`**（ツール・CLI・アプリ等の汎用トレンド）。**それぞれトレンド順のまま最大10件**、`rank` は各配列で1から独立に連番、`note` は description を踏まえた1行の日本語説明。どちらか一方が0件ならそのキーは省略してよい
 
 結果を `output/YYYY-MM-DD/stories.json` に書く。スキーマはREQUIREMENTS.md §5.1に厳密に従う（`run_id` はstep 2の値）。
 
@@ -90,6 +95,9 @@ node scripts/publish.mjs output/YYYY-MM-DD/stories.json    # → クラウドへ
 ```
 
 validateが2回の修正後も失敗する場合は続行し、最終報告で警告する。**finalizeを飛ばさないこと**（飛ばすと次回、同じ記事が再掲される）。
+
+- `publish.mjs` は単独のコマンドで実行する。ほかのコマンドと `;` でつなぐと、deploy-gate hook がデプロイとみなして止める
+- 終わったら `rm -rf .raw`
 
 ### 6. 配信
 
