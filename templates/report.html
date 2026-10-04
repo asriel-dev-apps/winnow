@@ -155,6 +155,39 @@
     .authLink.is-visible { display:inline-flex; }
     .content-hidden { display:none; }
 
+    /* ---- cloudflare highlights: 図が主・文章は補助。フローはPC横/スマホ縦にリフロー ---- */
+    .cfPicks { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
+    .cfPicks a { display:inline-flex; align-items:center; gap:8px; padding:6px 12px 6px 6px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); text-decoration:none; font-size:13px; line-height:1.4; }
+    .cfPicks a:hover { border-color:var(--gold); }
+    .cfPicks .cfKind { margin:0; width:22px; height:22px; padding:0; display:inline-grid; place-items:center; font-family:var(--mono); }
+    .cfCards { display:grid; gap:14px; margin-top:12px; }
+    .cfCard { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px 14px; box-shadow:0 1px 2px var(--ring); scroll-margin-top:110px; }
+    .cfEyebrow { margin:0; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted); }
+    .cfKind { display:inline-block; margin-right:8px; padding:1px 9px; border-radius:999px; font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:0; }
+    .cf-agent { background:color-mix(in srgb, #7a5cd6 14%, transparent); color:color-mix(in srgb, #7a5cd6 80%, var(--ink)); }
+    .cf-platform { background:color-mix(in srgb, var(--link) 14%, transparent); color:var(--link); }
+    .cf-pricing { background:var(--gold-wash); color:var(--gold-text); }
+    .cf-security { background:color-mix(in srgb, #d14b3d 14%, transparent); color:color-mix(in srgb, #d14b3d 85%, var(--ink)); }
+    .cfHeadline { margin:4px 0 10px; font-size:18px; line-height:1.5; }
+    .cfRow { margin:10px 0 4px; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.1em; }
+    .cfRow.ng { color:#d14b3d; } .cfRow.ok { color:#2f9461; }
+    .cfFlow { display:flex; align-items:stretch; gap:6px; }
+    .cfStep { flex:1; min-width:0; border:1.5px solid var(--line); border-radius:10px; padding:8px 10px; text-align:center; font-size:13px; line-height:1.45; display:flex; flex-direction:column; justify-content:center; background:var(--page); }
+    .cfStep small { color:var(--ink-2); font-size:11.5px; }
+    .cfStep.ng { border-color:color-mix(in srgb, #d14b3d 55%, transparent); background:color-mix(in srgb, #d14b3d 7%, transparent); }
+    .cfStep.ok { border-color:color-mix(in srgb, #2f9461 55%, transparent); background:color-mix(in srgb, #2f9461 7%, transparent); }
+    .cfArrow { flex:none; align-self:center; color:var(--muted); font-style:normal; }
+    .cfArrow::before { content:"→"; }
+    .cfStats { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); gap:8px; margin:6px 0 4px; }
+    .cfStats div { background:var(--gold-wash); border-radius:10px; padding:10px 12px; }
+    .cfStats .v { display:block; font-size:22px; font-weight:800; line-height:1.25; white-space:nowrap; }
+    .cfStats .l { display:block; font-size:12px; line-height:1.45; color:var(--ink-2); }
+    .cfWarn { margin:12px 0 0; padding:9px 12px; border-left:3px solid var(--gold); background:var(--gold-wash); border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; }
+    .cfUse { margin:12px 0 6px; padding-left:20px; font-size:14px; line-height:1.75; color:var(--ink-2); }
+    .cfSrc { font-size:12.5px; color:var(--link); }
+    .cfRest { margin-top:16px; }
+    .cfRest .watchRepo { margin-top:12px; }
+
     @media (max-width:520px) {
       body { font-size:15px; }
       .story { padding:18px 16px 12px; border-radius:12px; }
@@ -165,6 +198,11 @@
       .contentTab { min-height:40px; padding:0 6px; }
       .ownerChip { margin-left:auto; font-size:10.5px; }
       .actionBtn { flex:1 1 0; min-width:0; white-space:nowrap; padding:0 10px; }
+      .cfCard { padding:16px 14px 12px; }
+      .cfFlow { flex-direction:column; }
+      .cfArrow::before { content:"↓"; }
+      .cfStats .v { font-size:16px; }
+      .cfStats .l { font-size:11px; }
     }
   </style>
 </head>
@@ -242,6 +280,13 @@
         button.addEventListener('click', () => selectTab(button.dataset.tab));
       }
       window.addEventListener('hashchange', () => setVisible(routeFromHash(), true));
+      // ハッシュはタブの切替に使っているので、項目へのジャンプではハッシュを変えずにスクロールする
+      for (const link of document.querySelectorAll('[data-cf-jump]')) {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          document.querySelector(link.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
       setVisible(routeFromHash(), false);
     }
 

@@ -251,6 +251,9 @@ itemの**有効判定**は「`decided_at` が最新のイベントのverdict。�
      "releases": [{"tag": "v1.2.3", "url": "…", "published_at": "ISO8601", "notes_summary": "変更点1〜2文(任意)"}]}
   ],
   "cloudflare_watch": {
+    "highlights": [{"title": "原題", "url": "…", "product": "Durable Objects", "kind": "agent|platform|pricing|security",
+                    "headline": "日本語見出し", "before": [{"label": "…", "note": "任意"}], "after": [{"label": "…"}],
+                    "stats": [{"value": "0.25 秒", "label": "…"}], "warn": "任意", "use": ["…"]}],
     "blog":      [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}],
     "changelog": [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}]
   },

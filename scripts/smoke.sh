@@ -146,7 +146,9 @@ if grep -q 'RELEASE WATCH' "$smoke_out/report.html" &&
   grep -q 'pocketbase/pocketbase' "$smoke_out/report.html" &&
   grep -q 'CLOUDFLARE OFFICIAL' "$smoke_out/report.html" &&
   grep -q 'data-tab="cloudflare"' "$smoke_out/report.html" &&
-  grep -q 'Introducing Web Search API via AI Gateway' "$smoke_out/report.html"; then
+  grep -q 'Introducing Web Search API via AI Gateway' "$smoke_out/report.html" &&
+  grep -q 'エージェントが検索してから読むようになる' "$smoke_out/report.html" &&
+  grep -q 'class="cfRow ng"' "$smoke_out/report.html"; then
   pass "watch_sections"
 else
   fail "watch_sections" "rendered HTML missing watch section headings or repo names"

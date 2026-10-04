@@ -133,15 +133,52 @@ function cloudflareEntries(kind) {
   return Array.isArray(watch[kind]) ? watch[kind] : [];
 }
 
+const CLOUDFLARE_KINDS = { agent: 'AI エージェント', platform: 'Workers 基盤', pricing: '料金に影響', security: 'セキュリティ' };
+
+function cloudflareHighlights() {
+  const highlights = (data.cloudflare_watch || {}).highlights;
+  return Array.isArray(highlights) ? highlights : [];
+}
+
+function cfFlowHtml(steps, tone) {
+  return `<div class="cfFlow">${steps.map((step) => `<div class="cfStep ${tone}"><b>${esc(step.label)}</b>${step.note ? `<small>${esc(step.note)}</small>` : ''}</div>`).join('<i class="cfArrow" aria-hidden="true"></i>')}</div>`;
+}
+
+function cfHighlightHtml(h, index) {
+  const before = Array.isArray(h.before) ? h.before : [];
+  const after = Array.isArray(h.after) ? h.after : [];
+  const stats = Array.isArray(h.stats) ? h.stats : [];
+  const use = Array.isArray(h.use) ? h.use : [];
+  const kind = CLOUDFLARE_KINDS[h.kind] ? h.kind : 'platform';
+  return `<article class="cfCard" id="cf${index + 1}">
+      <p class="cfEyebrow"><span class="cfKind cf-${kind}">${esc(CLOUDFLARE_KINDS[kind])}</span>${esc(h.product || '')}</p>
+      <h3 class="cfHeadline">${esc(h.headline)}</h3>
+      ${stats.length ? `<div class="cfStats">${stats.map((s) => `<div><span class="v">${esc(s.value)}</span><span class="l">${esc(s.label)}</span></div>`).join('')}</div>` : ''}
+      ${before.length ? `<p class="cfRow ng">これまで</p>${cfFlowHtml(before, 'ng')}` : ''}
+      ${after.length ? `${before.length ? '<p class="cfRow ok">これから</p>' : ''}${cfFlowHtml(after, 'ok')}` : ''}
+      ${h.warn ? `<p class="cfWarn">${esc(h.warn)}</p>` : ''}
+      ${use.length ? `<ul class="cfUse">${use.map((u) => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
+      <a class="cfSrc" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)} →</a>
+    </article>`;
+}
+
 function cloudflareWatchHtml() {
-  const groups = CLOUDFLARE_GROUPS.filter(([kind]) => cloudflareEntries(kind).length);
-  if (!groups.length) return '';
+  const highlights = cloudflareHighlights();
+  const highlighted = new Set(highlights.map((h) => h.url));
+  const groups = CLOUDFLARE_GROUPS
+    .map(([kind, label]) => [label, cloudflareEntries(kind).filter((entry) => !highlighted.has(entry.url))])
+    .filter(([, entries]) => entries.length);
+  if (!highlights.length && !groups.length) return '';
+  const rest = groups.reduce((n, [, entries]) => n + entries.length, 0);
+  const lists = groups.map(([label, entries]) => `<h3 class="watchRepo">${label}</h3>
+        <ul class="watchList">${entries.map((entry) => `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.title)}</a>${entry.published_at ? ` <span class="watchDate">${esc(formatDate(entry.published_at))}</span>` : ''}${entry.summary ? `<p>${esc(entry.summary)}</p>` : ''}</li>`).join('')}</ul>`).join('');
   return `<section class="watchSection" id="cloudflareView">
     <p class="eyebrow">CLOUDFLARE OFFICIAL</p>
-    <div class="watchCards">${groups.map(([kind, label]) => `<article class="watchCard">
-        <h3 class="watchRepo">${label}</h3>
-        <ul class="watchList">${cloudflareEntries(kind).map((entry) => `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.title)}</a>${entry.published_at ? ` <span class="watchDate">${esc(formatDate(entry.published_at))}</span>` : ''}${entry.summary ? `<p>${esc(entry.summary)}</p>` : ''}</li>`).join('')}</ul>
-      </article>`).join('')}</div>
+    ${highlights.length ? `<nav class="cfPicks">${highlights.map((h, i) => `<a href="#cf${i + 1}" data-cf-jump><span class="cfKind cf-${CLOUDFLARE_KINDS[h.kind] ? h.kind : 'platform'}">${i + 1}</span>${esc(h.product || h.headline)}</a>`).join('')}</nav>
+    <div class="cfCards">${highlights.map(cfHighlightHtml).join('')}</div>` : ''}
+    ${groups.length ? (highlights.length
+      ? `<details class="cfRest"><summary>ほかの発表（${rest} 件）</summary>${lists}</details>`
+      : `<div class="watchCards"><article class="watchCard">${lists}</article></div>`) : ''}
   </section>`;
 }
 
@@ -171,7 +208,7 @@ function renderContentTabs() {
   const hasReleaseWatch = Array.isArray(data.release_watch) && data.release_watch.length;
   const hasOssRanking = (Array.isArray(data.oss_ranking) && data.oss_ranking.length)
     || (Array.isArray(data.oss_ranking_general) && data.oss_ranking_general.length);
-  const hasCloudflare = CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length);
+  const hasCloudflare = cloudflareHighlights().length || CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length);
   if (!hasReleaseWatch && !hasOssRanking && !hasCloudflare) return '';
   return `<div class="contentTabs" id="contentTabs" role="tablist" aria-label="Report sections">
         <button class="contentTab" type="button" role="tab" data-tab="survey" aria-selected="true">SURVEY</button>
@@ -223,8 +260,18 @@ if (Array.isArray(data.release_watch) && data.release_watch.length) {
     md += `\n`;
   }
 }
-if (CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length)) {
+if (cloudflareHighlights().length || CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length)) {
   md += `## CLOUDFLARE OFFICIAL\n\n`;
+  for (const h of cloudflareHighlights()) {
+    md += `### ${line(h.headline)}\n\n[${line(h.title)}](${h.url})${h.product ? ` / ${line(h.product)}` : ''}\n\n`;
+    const flow = (steps) => steps.map((s) => line(s.label)).join(' → ');
+    if (Array.isArray(h.before) && h.before.length) md += `- これまで: ${flow(h.before)}\n`;
+    if (Array.isArray(h.after) && h.after.length) md += `- ${h.before?.length ? 'これから' : 'しくみ'}: ${flow(h.after)}\n`;
+    for (const s of h.stats || []) md += `- ${line(s.value)}: ${line(s.label)}\n`;
+    if (h.warn) md += `- 注意: ${line(h.warn)}\n`;
+    for (const u of h.use || []) md += `- ${line(u)}\n`;
+    md += `\n`;
+  }
   for (const [kind, label] of CLOUDFLARE_GROUPS) {
     const entries = cloudflareEntries(kind);
     if (!entries.length) continue;

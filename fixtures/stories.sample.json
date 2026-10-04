@@ -73,6 +73,9 @@
     }
   ],
   "cloudflare_watch": {
+    "highlights": [
+      {"title": "Introducing Web Search API via AI Gateway", "url": "https://blog.cloudflare.com/introducing-web-search-api/", "product": "AI Gateway", "kind": "agent", "headline": "エージェントが検索してから読むようになる", "before": [{"label": "URL を推測"}, {"label": "404"}], "after": [{"label": "AI Gateway"}, {"label": "検索結果"}], "use": ["最新情報が要るエージェントに"]}
+    ],
     "blog": [
       {"title": "Introducing Web Search API via AI Gateway", "url": "https://blog.cloudflare.com/introducing-web-search-api/", "published_at": "2026-10-02T13:00:00Z", "summary": "AI GatewayからWeb検索APIを呼べるようになりました。"}
     ],

@@ -79,6 +79,19 @@ try {
       errors.push(violation('cloudflare_watch', 'cloudflare_watch must be an object'));
     } else {
       for (const [kind, entries] of Object.entries(watch)) {
+        if (kind === 'highlights') {
+          if (!Array.isArray(entries)) { errors.push(violation('cloudflare_watch', 'cloudflare_watch.highlights must be an array')); continue; }
+          if (entries.length > 6) errors.push(violation('cloudflare_watch', 'cloudflare_watch.highlights must have at most 6 entries'));
+          const isSteps = (v) => v === undefined || (Array.isArray(v) && v.every((s) => nonEmpty(s?.label)));
+          for (const h of entries) {
+            for (const key of ['title', 'url', 'headline']) if (!nonEmpty(h?.[key])) errors.push(violation('cloudflare_watch', `highlight ${key} must be non-empty`));
+            if (!['agent', 'platform', 'pricing', 'security'].includes(h?.kind)) errors.push(violation('cloudflare_watch', `highlight kind must be agent|platform|pricing|security: ${h?.headline}`));
+            if (!isSteps(h?.before) || !isSteps(h?.after)) errors.push(violation('cloudflare_watch', `highlight before/after must be [{label, note?}]: ${h?.headline}`));
+            if (!(h?.before?.length || h?.after?.length || h?.stats?.length)) errors.push(violation('cloudflare_watch', `highlight needs a figure (before/after/stats): ${h?.headline}`));
+            if (!Array.isArray(h?.use) || h.use.length === 0) errors.push(violation('cloudflare_watch', `highlight use must be a non-empty array: ${h?.headline}`));
+          }
+          continue;
+        }
         if (!['blog', 'changelog'].includes(kind)) errors.push(violation('cloudflare_watch', `cloudflare_watch has unknown key: ${kind}`));
         else if (!Array.isArray(entries)) errors.push(violation('cloudflare_watch', `cloudflare_watch.${kind} must be an array`));
         else for (const entry of entries) {

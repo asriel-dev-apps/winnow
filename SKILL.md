@@ -66,6 +66,10 @@ stories.json に任意ブロックを追加する（データが無ければ省�
 
 - **`release_watch`**: `/tmp/winnow-raw/agents.json` の `raw_tags` に `github-release` を含むitemから生成。**リポジトリごとに別entry**（claude-codeとcodexを混ぜない）。各リリースは新しい順に最大5件、`notes_summary` は item の `notes`（リリースノート本文）から**変更内容を1〜2文の日本語で要約**（notesが空なら notes_summary は省略）
 - **`cloudflare_watch`**: `/tmp/winnow-raw/cloudflare.json`（Cloudflare公式。`raw_tags` の `cloudflare-blog` / `cloudflare-changelog` で振り分け）から `{"blog": [...], "changelog": [...]}` を生成。**興味スコアで絞らず全件を新しい順に載せる**（ユーザーがCloudflare公式の最新情報を常に見たいため）。各entryは `title`（原題のまま）・`url`・`published_at`・`summary`（item の `notes` から書く。notesが空なら省略）。summary は**専門外の人にも通じる平易な日本語1〜2文**で、次の3点を必ず含める: ①何ができるようになったか ②なぜ作られたか（どんな困りごとを解決するのか） ③何に・どう使うか（具体的な使い道）。製品名以外のカタカナ語・略語を並べない。notesに②が書かれていなければ推測で埋めず、①と③だけにする
+  - さらに `highlights`（**最大5件**、該当が無ければ空配列）を作る。全件の中から**影響の大きいもの**を選び、図で見せる: `interests.yaml` の重点（Workers / Durable Objects / D1 / KV / エージェント / MCP / Hono）に直接効く新機能・既定動作の変更、料金や無料枠の変更、廃止・移行が要るもの、緊急のセキュリティ対応。会社の取り組み紹介・事例集・速度ランキングは選ばない
+  - 各highlight: `title`（原題）・`url`・`product`（製品名）・`kind`（`agent`=AIエージェント / `platform`=Workers基盤 / `pricing`=料金に影響 / `security`）・`headline`（何が変わるかを言い切る日本語見出し。例「利用者が画面を閉じても、処理が最後まで続く」）・`use`（使いどころ等1〜3行の配列）・任意で `warn`（料金開始日など、行動が要る注意1文）
+  - **図（文章より図が主）**: 次の少なくとも1つを入れる。`before`/`after` = 処理の流れを2〜4段の `[{"label": "短い名詞", "note": "補足(任意)"}]` で（before=これまで・after=これから。新しい仕組みだけなら after のみ）。`stats` = 記事中の数値 `[{"value": "0.25 秒", "label": "書き込みが全拠点に届くまで"}]`（2〜3個、記事に無い数値を作らない）
+  - highlightに選んだ記事も `blog`/`changelog` には残してよい（表示時に「ほかの発表」から自動で除かれる）
 - **`oss_ranking`（LLM & AGENTS）** と **`oss_ranking_general`（TOOLS & APPS）**: `/tmp/winnow-raw/ghtrend.json` の各リポジトリを、`config/sources.json` の `ranking_keywords` にリポジトリ名または `description` がマッチ（大文字小文字無視）するかで振り分ける。**マッチ → `oss_ranking`**（LLM・エージェント系）、**非マッチ → `oss_ranking_general`**（ツール・CLI・アプリ等の汎用トレンド）。**それぞれトレンド順のまま最大10件**、`rank` は各配列で1から独立に連番、`note` は description を踏まえた1行の日本語説明。どちらか一方が0件ならそのキーは省略してよい
 
 結果を `output/YYYY-MM-DD/stories.json` に書く。スキーマはREQUIREMENTS.md §5.1に厳密に従う（`run_id` はstep 2の値）。
