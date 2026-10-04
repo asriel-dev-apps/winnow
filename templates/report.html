@@ -309,7 +309,7 @@
         link.textContent = 'LOGOUT';
         link.classList.add('is-visible');
       } else if (mode === 'viewer') {
-        link.href = '/login';
+        link.href = `/login?return=${encodeURIComponent(location.pathname + location.hash)}`;
         link.textContent = 'LOGIN';
         link.classList.add('is-visible');
       } else {
@@ -491,7 +491,8 @@
         const body = await res.json();
         enableOwnerMode(body.state || {});
       } catch {
-        /* viewer mode: leave the static document untouched */
+        // 未ログインだと Access がログイン画面(別オリジン)へ転送し、fetch は失敗する。閲覧モードとして扱う
+        setAuthLink('viewer');
       }
     }
     window.addEventListener('online', flushQueue);

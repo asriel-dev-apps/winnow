@@ -4,5 +4,14 @@
   "compatibility_date": "2026-07-01",
   "assets": { "directory": "../output" },
   "d1_databases": [{ "binding": "DB", "database_name": "winnow", "database_id": "04db556e-9f3b-4d11-8939-a6e6165b3e71" }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // 本番は winnow.tt-as.dev。/login と /api/feedback は Cloudflare Access の内側(Google ログイン)。
+  // workers.dev は残す: 旧リンクのレポート閲覧と、毎朝の同期スクリプト(鍵で export だけ読める)が使う
+  "workers_dev": true,
+  "routes": [{ "pattern": "winnow.tt-as.dev", "custom_domain": true }],
+  "vars": {
+    "CANONICAL_HOST": "winnow.tt-as.dev",
+    "ACCESS_TEAM_DOMAIN": "https://misty-band-5e96.cloudflareaccess.com",
+    "ACCESS_AUD": "5b521eeea227574f16cd4e542ed2ba1cd5bcde71b9ffbae2064737684976ff09"
+  }
 }
