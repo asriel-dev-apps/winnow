@@ -32,7 +32,8 @@ function items(kind, cap) {
     author: text(tag(b, 'dc:creator')) || null,
     published_at: new Date(text(tag(b, 'pubDate'))).toISOString(),
     engagement: {},
-    notes: text(tag(b, 'description')).slice(0, 800),
+    // ブログのdescriptionは1行しかなく「なぜ作ったか」が書かれないため、本文冒頭も渡す
+    notes: `${text(tag(b, 'description'))} ${text(tag(b, 'content:encoded'))}`.trim().slice(0, 1500),
     raw_tags: ['cloudflare-official', `cloudflare-${kind}`,
       ...[...b.matchAll(/<category>([\s\S]*?)<\/category>/g)].map(([, c]) => text(c))],
   })).filter((i) => i.title && i.url);
