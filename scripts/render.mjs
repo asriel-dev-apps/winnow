@@ -144,18 +144,66 @@ function cfFlowHtml(steps, tone) {
   return `<div class="cfFlow">${steps.map((step) => `<div class="cfStep ${tone}"><b>${esc(step.label)}</b>${step.note ? `<small>${esc(step.note)}</small>` : ''}</div>`).join('<i class="cfArrow" aria-hidden="true"></i>')}</div>`;
 }
 
-function cfHighlightHtml(h, index) {
+// 旧形式(〜2026-10-08)のハイライトは before/after/stats を直に持つ。図の配列に直して同じ描画に通す
+function cfFigures(h) {
+  if (Array.isArray(h.figures) && h.figures.length) return h.figures;
   const before = Array.isArray(h.before) ? h.before : [];
   const after = Array.isArray(h.after) ? h.after : [];
-  const stats = Array.isArray(h.stats) ? h.stats : [];
+  return [
+    ...(Array.isArray(h.stats) && h.stats.length ? [{ type: 'stats', items: h.stats }] : []),
+    ...(before.length || after.length ? [{ type: 'flow', before, after }] : []),
+  ];
+}
+
+const list = (value) => (Array.isArray(value) ? value : []);
+
+// 図の型ごとの描画。PC 横／スマホ縦のリフローは CSS が担う(report.html の cf* スタイル)
+const CF_FIGURES = {
+  flow: (f) => {
+    const before = list(f.before);
+    const after = list(f.after);
+    return `${before.length ? `<p class="cfRow ng">これまで</p>${cfFlowHtml(before, 'ng')}` : ''}${after.length ? `${before.length ? '<p class="cfRow ok">これから</p>' : ''}${cfFlowHtml(after, 'ok')}` : ''}`;
+  },
+  // PC は登場人物ごとの縦線と、その間を結ぶ矢印。スマホは同じ要素を「A → B: 内容」の番号付きリストに組み替える
+  sequence: (f) => {
+    const actors = list(f.actors);
+    const steps = list(f.steps);
+    const lanes = actors.map((_, i) => `<i class="cfSeqLane" style="grid-column:${i + 1};grid-row:1/span ${steps.length}" aria-hidden="true"></i>`).join('');
+    const rows = steps.map((s, j) => {
+      const from = actors.indexOf(s.from);
+      const to = actors.indexOf(s.to);
+      const lo = Math.min(from, to);
+      const span = Math.abs(to - from) + 1;
+      const dir = from === to ? ' self' : (to < from ? ' rev' : '');
+      return `<li class="cfSeqStep${dir}" style="grid-row:${j + 1};grid-column:${lo + 1}/span ${span};--span:${span}"><span class="cfSeqWho"><b>${esc(s.from)}</b><i aria-hidden="true">→</i><b>${esc(s.to)}</b></span><span class="cfSeqMsg">${esc(s.label)}</span></li>`;
+    }).join('');
+    return `<div class="cfSeq" style="--n:${actors.length}"><div class="cfSeqActors" aria-hidden="true">${actors.map((a) => `<b>${esc(a)}</b>`).join('')}</div><ol class="cfSeqSteps">${lanes}${rows}</ol></div>`;
+  },
+  layers: (f) => `<div class="cfLayers">${list(f.layers).map((l) => `<div class="cfLayer"><b>${esc(l.label)}</b><ul>${list(l.items).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`,
+  // スマホでは行ごとのカードに積む。セルの見出しは data-col から CSS で出す
+  compare: (f) => {
+    const columns = list(f.columns);
+    return `<table class="cfCompare"><thead><tr><th></th>${columns.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}</tr></thead><tbody>${list(f.rows).map((r) => `<tr><th scope="row">${esc(r.label)}</th>${list(r.cells).map((c, i) => `<td data-col="${esc(columns[i])}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  },
+  timeline: (f) => `<ol class="cfTimeline">${list(f.events).map((e) => `<li><span class="d">${esc(e.date)}</span><b>${esc(e.label)}</b>${e.note ? `<small>${esc(e.note)}</small>` : ''}</li>`).join('')}</ol>`,
+  split: (f) => `<div class="cfSplit">${['left', 'right'].map((side) => `<div class="cfSide ${side}"><b>${esc(f[side]?.label)}</b><ul>${list(f[side]?.items).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`,
+  stats: (f) => `<div class="cfStats">${list(f.items).map((s) => `<div><span class="v">${esc(s.value)}</span><span class="l">${esc(s.label)}</span></div>`).join('')}</div>`,
+};
+
+function cfFigureHtml(f) {
+  if (!Object.hasOwn(CF_FIGURES, f?.type)) return '';
+  const draw = CF_FIGURES[f.type];
+  return `<figure class="cfFig cfFig-${f.type}">${draw(f)}${f.caption ? `<figcaption>${esc(f.caption)}</figcaption>` : ''}</figure>`;
+}
+
+function cfHighlightHtml(h, index) {
   const use = Array.isArray(h.use) ? h.use : [];
   const kind = CLOUDFLARE_KINDS[h.kind] ? h.kind : 'platform';
   return `<article class="cfCard" id="cf${index + 1}">
       <p class="cfEyebrow"><span class="cfKind cf-${kind}">${esc(CLOUDFLARE_KINDS[kind])}</span>${esc(h.product || '')}</p>
       <h3 class="cfHeadline">${esc(h.headline)}</h3>
-      ${stats.length ? `<div class="cfStats">${stats.map((s) => `<div><span class="v">${esc(s.value)}</span><span class="l">${esc(s.label)}</span></div>`).join('')}</div>` : ''}
-      ${before.length ? `<p class="cfRow ng">これまで</p>${cfFlowHtml(before, 'ng')}` : ''}
-      ${after.length ? `${before.length ? '<p class="cfRow ok">これから</p>' : ''}${cfFlowHtml(after, 'ok')}` : ''}
+      ${h.essence ? `<p class="cfEssence">${esc(h.essence)}</p>` : ''}
+      ${cfFigures(h).map(cfFigureHtml).join('')}
       ${h.warn ? `<p class="cfWarn">${esc(h.warn)}</p>` : ''}
       ${use.length ? `<ul class="cfUse">${use.map((u) => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
       <a class="cfSrc" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)} →</a>
@@ -226,6 +274,18 @@ function renderStaticDocument() {
   return (data.stories || []).map((story) => storyHtml(story)).join('') + watchSectionsHtml() + fetch;
 }
 
+// report.md 用。図の型ごとに、同じ中身を箇条書きの文で書く
+const flowText = (steps) => list(steps).map((s) => line(s.label)).join(' → ');
+const CF_FIGURES_MD = {
+  flow: (f) => `${list(f.before).length ? `- これまで: ${flowText(f.before)}\n` : ''}${list(f.after).length ? `- ${list(f.before).length ? 'これから' : 'しくみ'}: ${flowText(f.after)}\n` : ''}`,
+  sequence: (f) => list(f.steps).map((s, i) => `- ${i + 1}. ${line(s.from)} → ${line(s.to)}: ${line(s.label)}\n`).join(''),
+  layers: (f) => list(f.layers).map((l) => `- ${line(l.label)}: ${list(l.items).map(line).join('、')}\n`).join(''),
+  compare: (f) => list(f.rows).map((r) => `- ${line(r.label)}: ${list(r.cells).map((c, i) => `${line(list(f.columns)[i])} ${line(c)}`).join(' / ')}\n`).join(''),
+  timeline: (f) => list(f.events).map((e) => `- ${line(e.date)}: ${line(e.label)}${e.note ? `(${line(e.note)})` : ''}\n`).join(''),
+  split: (f) => ['left', 'right'].map((side) => `- ${line(f[side]?.label)}: ${list(f[side]?.items).map(line).join('、')}\n`).join(''),
+  stats: (f) => list(f.items).map((s) => `- ${line(s.value)}: ${line(s.label)}\n`).join(''),
+};
+
 let md = `# Winnow ${data.date || ''}\n\n`;
 md += `## 今回のサーベイを3行で\n\n`;
 for (const item of data.macro_summary || []) md += `- ${line(item)}\n`;
@@ -264,10 +324,13 @@ if (cloudflareHighlights().length || CLOUDFLARE_GROUPS.some(([kind]) => cloudfla
   md += `## CLOUDFLARE OFFICIAL\n\n`;
   for (const h of cloudflareHighlights()) {
     md += `### ${line(h.headline)}\n\n[${line(h.title)}](${h.url})${h.product ? ` / ${line(h.product)}` : ''}\n\n`;
-    const flow = (steps) => steps.map((s) => line(s.label)).join(' → ');
-    if (Array.isArray(h.before) && h.before.length) md += `- これまで: ${flow(h.before)}\n`;
-    if (Array.isArray(h.after) && h.after.length) md += `- ${h.before?.length ? 'これから' : 'しくみ'}: ${flow(h.after)}\n`;
-    for (const s of h.stats || []) md += `- ${line(s.value)}: ${line(s.label)}\n`;
+    if (h.essence) md += `${line(h.essence)}\n\n`;
+    for (const f of cfFigures(h)) {
+      if (!Object.hasOwn(CF_FIGURES_MD, f?.type)) continue;
+      const describe = CF_FIGURES_MD[f.type];
+      if (f.caption) md += `- 図: ${line(f.caption)}\n`;
+      md += describe(f);
+    }
     if (h.warn) md += `- 注意: ${line(h.warn)}\n`;
     for (const u of h.use || []) md += `- ${line(u)}\n`;
     md += `\n`;

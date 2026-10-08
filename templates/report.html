@@ -191,6 +191,52 @@
     .cfStats div { background:var(--gold-wash); border-radius:10px; padding:10px 12px; }
     .cfStats .v { display:block; font-size:22px; font-weight:800; line-height:1.25; white-space:nowrap; }
     .cfStats .l { display:block; font-size:12px; line-height:1.45; color:var(--ink-2); }
+    .cfEssence { margin:-4px 0 8px; font-size:14px; line-height:1.75; color:var(--ink-2); }
+    .cfFig { margin:12px 0 4px; }
+    .cfFig figcaption { margin-top:6px; font-size:12px; line-height:1.6; color:var(--muted); }
+    /* sequence: 登場人物ごとの縦線(cfSeqLane)の上に、from の列から to の列まで矢印を張る。
+       矢印の両端は列の中央なので、張った幅(--span 列分)から半列ずつ内側に寄せる */
+    .cfSeqActors, .cfSeqSteps { display:grid; grid-template-columns:repeat(var(--n), minmax(0, 1fr)); column-gap:0; }
+    .cfSeqActors b { margin:0 4px; padding:6px 6px; border:1.5px solid var(--line); border-radius:8px; background:var(--page); text-align:center; font-size:12.5px; line-height:1.4; }
+    .cfSeqSteps { margin:0; padding:4px 0 6px; list-style:none; }
+    .cfSeqLane { background:linear-gradient(var(--line), var(--line)) center / 1.5px 100% no-repeat; }
+    .cfSeqStep { position:relative; z-index:1; margin:6px calc(50% / var(--span)) 0; padding:0 4px 7px; border-bottom:1.5px solid var(--gold); text-align:center; font-size:12.5px; line-height:1.45; }
+    .cfSeqStep::after { content:""; position:absolute; right:-1px; bottom:-5.5px; border:5px solid transparent; border-left:8px solid var(--gold); border-right:0; }
+    .cfSeqStep.rev::after { right:auto; left:-1px; border-left:0; border-right:8px solid var(--gold); }
+    .cfSeqStep.self { margin:6px 6px 0; border-bottom:0; padding-bottom:2px; border-radius:8px; background:var(--gold-wash); }
+    .cfSeqStep.self::after { content:none; }
+    .cfSeqWho { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    .cfSeqWho i { font-style:normal; color:var(--muted); margin:0 4px; }
+    .cfSeqMsg { display:block; }
+    /* layers: 上が利用者側。段の名前と、その段に入る部品 */
+    .cfLayers { display:grid; gap:6px; }
+    .cfLayer { display:grid; grid-template-columns:9em minmax(0, 1fr); gap:10px; align-items:center; padding:8px 10px; border:1.5px solid var(--line); border-radius:10px; background:var(--page); }
+    .cfLayer b { font-size:13px; line-height:1.45; }
+    .cfLayer ul, .cfSide ul { margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:5px; }
+    .cfLayer li { padding:1px 9px; border-radius:6px; background:var(--gold-wash); font-size:12.5px; line-height:1.6; }
+    .cfCompare { width:100%; border-collapse:collapse; font-size:13px; line-height:1.55; }
+    .cfCompare th, .cfCompare td { padding:7px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+    .cfCompare thead th { font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--gold-text); border-bottom:1.5px solid var(--gold); }
+    .cfCompare tbody th { font-weight:700; color:var(--ink); }
+    .cfCompare td { color:var(--ink-2); }
+    /* timeline: PC は横一列に日付を並べ、上端の線で時間の流れを示す */
+    .cfTimeline { margin:0; padding:0; list-style:none; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0, 1fr); gap:10px; }
+    .cfTimeline li { position:relative; padding:14px 2px 0; border-top:2px solid var(--line); font-size:13px; line-height:1.5; }
+    .cfTimeline li::before { content:""; position:absolute; top:-7px; left:0; width:12px; height:12px; border-radius:50%; background:var(--gold); }
+    .cfTimeline .d { display:block; font-family:var(--mono); font-size:12px; font-weight:700; color:var(--gold-text); }
+    .cfTimeline b { display:block; }
+    .cfTimeline small { display:block; color:var(--ink-2); font-size:11.5px; }
+    .cfSplit { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .cfSide { padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; background:var(--page); }
+    .cfSide.left { border-color:var(--gold); background:var(--gold-wash); }
+    .cfSide b { display:block; margin-bottom:6px; font-size:13px; line-height:1.45; }
+    .cfSide ul { flex-direction:column; gap:3px; font-size:13px; line-height:1.55; color:var(--ink-2); }
+    .cfSide li::before { content:"・"; color:var(--muted); }
+    @media (prefers-color-scheme: dark) {
+      .cfSeqActors b, .cfLayer, .cfSide { background:#2a2a28; border-color:#4a4a46; }
+      .cfSide.left { background:var(--gold-wash); border-color:var(--gold); }
+      .cfSeqLane { background-image:linear-gradient(#4a4a46, #4a4a46); }
+    }
     .cfWarn { margin:12px 0 0; padding:9px 12px; border-left:3px solid var(--gold); background:var(--gold-wash); border-radius:0 8px 8px 0; font-size:13.5px; line-height:1.7; }
     .cfUse { margin:12px 0 6px; padding-left:20px; font-size:14px; line-height:1.75; color:var(--ink-2); }
     .cfSrc { font-size:12.5px; color:var(--link); }
@@ -212,6 +258,27 @@
       .cfArrow::before { content:"↓"; }
       .cfStats .v { font-size:16px; }
       .cfStats .l { font-size:11px; }
+      /* sequence はスマホでは列が細すぎるので、番号付きの「A → B: 内容」に組み替える */
+      .cfSeqActors, .cfSeqLane { display:none; }
+      .cfSeqSteps { display:block; counter-reset:seq; padding:0; }
+      .cfSeqStep, .cfSeqStep.self { margin:0; padding:7px 0 7px 30px; border-bottom:1px dashed var(--line); border-radius:0; background:none; text-align:left; counter-increment:seq; }
+      .cfSeqStep:last-child { border-bottom:0; }
+      .cfSeqStep::before { content:counter(seq); position:absolute; left:0; top:9px; width:20px; height:20px; border-radius:50%; background:var(--gold-wash); color:var(--gold-text); font-family:var(--mono); font-size:11px; font-weight:700; line-height:20px; text-align:center; }
+      .cfSeqStep::after, .cfSeqStep.rev::after { content:none; }
+      .cfSeqWho { position:static; width:auto; height:auto; overflow:visible; clip-path:none; white-space:normal; display:block; font-size:12px; }
+      .cfSeqMsg { color:var(--ink-2); }
+      .cfLayer { grid-template-columns:minmax(0, 1fr); gap:4px; }
+      .cfCompare thead { display:none; }
+      .cfCompare, .cfCompare tbody, .cfCompare tr, .cfCompare th, .cfCompare td { display:block; }
+      .cfCompare tr { margin-bottom:8px; border:1.5px solid var(--line); border-radius:10px; background:var(--page); }
+      .cfCompare tbody th { padding:7px 10px; border-bottom:1.5px solid var(--gold); }
+      .cfCompare td { display:grid; grid-template-columns:7em minmax(0, 1fr); gap:8px; padding:6px 10px; }
+      .cfCompare td:last-child { border-bottom:0; }
+      .cfCompare td::before { content:attr(data-col); font-family:var(--mono); font-size:11px; color:var(--gold-text); }
+      .cfTimeline { display:block; margin-left:5px; border-left:2px solid var(--line); }
+      .cfTimeline li { padding:0 0 12px 16px; border-top:0; }
+      .cfTimeline li::before { top:6px; left:-7px; }
+      .cfSplit { grid-template-columns:minmax(0, 1fr); }
     }
   </style>
 </head>

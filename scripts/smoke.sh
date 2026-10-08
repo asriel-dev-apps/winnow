@@ -165,6 +165,43 @@ else
   fail "watch_backward_compat" "$(cat "$tmpdir/compat-validate.err" "$tmpdir/compat-render.err" 2>/dev/null)"
 fi
 
+# §4.9 の図。fixtures/stories.cloudflare.json(7種の図を含む)を1か所ずつ壊し、validate が狙った理由で落ちるかを見る
+cf_case() {
+  local name="$1" expect="$2" filter="$3" pattern="${4:-}"
+  local file="$tmpdir/cf-${name}.json"
+  if ! jq "$filter" fixtures/stories.cloudflare.json >"$file" 2>"$tmpdir/cf-${name}.err"; then
+    fail "cf_${name}" "jq: $(cat "$tmpdir/cf-${name}.err")"
+    return
+  fi
+  node scripts/validate.mjs "$file" >"$tmpdir/cf-${name}.out" 2>&1
+  local code=$?
+  local ok=0
+  if [[ "$expect" == "pass" ]]; then [[ "$code" -eq 0 ]] && ok=1
+  else [[ "$code" -ne 0 ]] && grep -qF -- "$pattern" "$tmpdir/cf-${name}.out" && ok=1
+  fi
+  if [[ "$ok" -eq 1 ]]; then
+    pass "cf_${name}"
+  else
+    fail "cf_${name}" "exit=$code $(tr '\n' ' ' < "$tmpdir/cf-${name}.out")"
+  fi
+}
+# 2026-10-08 の旧形式ハイライト(before が1段)。旧形式は当時の基準のまま通す
+legacy_highlight='{"title":"The keys to the Internet change on October 11. Are you ready?","url":"https://blog.cloudflare.com/root-ksk-2024-rollover/","product":"DNS / 1.1.1.1","kind":"security","headline":"10月11日に DNS の大元の鍵が替わる。古い鍵しか知らないリゾルバーはサイトに届かなくなる","before":[{"label":"旧ルート鍵で検証"}],"after":[{"label":"新ルート鍵 KSK-2024 で検証","note":"2026年10月11日に切り替え"},{"label":"新鍵を知らないリゾルバーは名前解決に失敗"}],"use":["DNSSEC を検証する DNS サーバーを自前で運用しているなら、新しい鍵を信頼しているか確認する"],"warn":"切り替えは 2026年10月11日。自前のリゾルバーは事前に readiness test で確認する"}'
+cf_case figures_all_types pass '.'
+cf_case legacy_only pass ".cloudflare_watch.highlights = [${legacy_highlight}]"
+cf_case unknown_type fail '.cloudflare_watch.highlights[0].figures[0].type = "chart"' 'figure 1 (chart): unknown type'
+cf_case flow_after_1step fail '.cloudflare_watch.highlights[4].figures[0].after |= .[:1]' 'figure 1 (flow): after must be 2-5'
+cf_case flow_before_1step fail '.cloudflare_watch.highlights[4].figures[0].before |= .[:1]' 'figure 1 (flow): before must be 2-5'
+cf_case sequence_from_unknown fail '.cloudflare_watch.highlights[2].figures[0].steps[0].from = "攻撃者"' 'figure 1 (sequence): step 1 from \"攻撃者\" is not in actors'
+cf_case sequence_5_actors fail '.cloudflare_watch.highlights[2].figures[0].actors += ["顧客"]' 'figure 1 (sequence): actors must be 2-4'
+cf_case compare_cells fail '.cloudflare_watch.highlights[0].figures[0].rows[1].cells |= .[:1]' 'figure 1 (compare): row 2 cells must have 2 entries'
+cf_case timeline_no_date fail '.cloudflare_watch.highlights[1].figures[0].events[1] |= del(.date)' 'figure 1 (timeline): event 2 must have date and label'
+cf_case timeline_1_event fail '.cloudflare_watch.highlights[1].figures[0].events |= .[:1]' 'figure 1 (timeline): events must have 2-6'
+cf_case stats_4_items fail '.cloudflare_watch.highlights[0].figures[1].items += [{"value":"3","label":"x"},{"value":"4","label":"y"}]' 'figure 2 (stats): items must be 2-3'
+cf_case figures_4 fail '.cloudflare_watch.highlights[2].figures += .cloudflare_watch.highlights[2].figures' 'highlight figures must have 1-3 entries'
+cf_case figures_none fail '.cloudflare_watch.highlights[3].figures = []' 'highlight figures must have 1-3 entries'
+cf_case no_figure_no_legacy fail '.cloudflare_watch.highlights[3] |= del(.figures)' 'highlight needs figures (or legacy before/after/stats)'
+
 cat >"$tmpdir/raw-release.json" <<'JSON'
 [
   {

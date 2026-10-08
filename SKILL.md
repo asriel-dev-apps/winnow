@@ -25,6 +25,7 @@ cd $ROOT; mkdir -p .raw; scripts/fetch/hn.sh > .raw/hn.json 2>.raw/hn.err; echo 
 ```
 
 - zenn は exit 141（SIGPIPE）を返すことがある。出力が妥当なJSONなら成功として扱う
+- cloudflare は各記事の本文全文を `.raw/cloudflare/<id>.txt` にも書き、その絶対パスを item の `body_path` に入れる（ステップ4.5のハイライトでサブエージェントが読む）
 - 骨格ソース（hn, zenn, qiita, hatebu）が**4つとも失敗**した場合のみエラー終了し、ユーザーに報告する
 - それ以外の失敗はスキップし、ソース名と失敗理由を控えておく（stories.jsonの `fetch_status` に記録する）
 
@@ -71,14 +72,57 @@ stories.json に任意ブロックを追加する（データが無ければ省�
 
 - **`release_watch`**: `.raw/agents.json` の `raw_tags` に `github-release` を含むitemから生成。**リポジトリごとに別entry**（claude-codeとcodexを混ぜない）。各リリースは新しい順に最大5件、`notes_summary` は item の `notes`（リリースノート本文）から**変更内容を1〜2文の日本語で要約**（notesが空なら notes_summary は省略）
 - **`cloudflare_watch`**: `.raw/cloudflare.json`（Cloudflare公式。`raw_tags` の `cloudflare-blog` / `cloudflare-changelog` で振り分け）から `{"blog": [...], "changelog": [...]}` を生成。**興味スコアで絞らず全件を新しい順に載せる**（ユーザーがCloudflare公式の最新情報を常に見たいため）。各entryは `title`（原題のまま）・`url`・`published_at`・`summary`（item の `notes` から書く。notesが空なら省略）。summary は**専門外の人にも通じる平易な日本語1〜2文**で、次の3点を必ず含める: ①何ができるようになったか ②なぜ作られたか（どんな困りごとを解決するのか） ③何に・どう使うか（具体的な使い道）。製品名以外のカタカナ語・略語を並べない。notesに②が書かれていなければ推測で埋めず、①と③だけにする
-  - さらに `highlights`（**最大5件**）を作り、図で見せる。**全件が候補**で、5件を超えるときだけ次の順に外していく（1から先に外す。5件以下ならどれも外さない）:
+  - さらに `highlights`（**最大5件**）を作り、図で見せる。**選ぶのはタイトルと `notes` だけを見て行う。** 全件が候補で、5件を超えるときだけ次の順に外していく（1から先に外す。5件以下ならどれも外さない）:
     1. 使い方が何も変わらない発表 — 会社の取り組み・寄付・事例集・速度ランキング・方針表明
     2. ネットワーク管理・社内セキュリティ向けの細かい設定変更 — Zero Trust / Access / Tunnel の権限や挙動、WAF・Rules の式の関数追加など（緊急の脆弱性対応は外さない）
     3. 既存機能の小さな改善 — 上限値の引き上げ、権限の細分化、名前の変更
     4. 同じ発表のブログと changelog の重複 — 1件にまとめ、図を描きやすい方を選ぶ
   - 最後まで外さないもの: **AI**（Workers AI のモデル、AI Gateway、AI Search、Agents SDK、MCP。Cloudflare が力を入れている領域）、Workers 基盤（Workers / Durable Objects / D1 / KV / R2 / Containers）、料金・無料枠の変更、廃止・移行が要るもの。それでも5件を超えるなら、新機能・既定動作の変更を小さな改善より優先する
-  - 各highlight: `title`（原題）・`url`・`product`（製品名）・`kind`（`agent`=AI（モデル・エージェント・AI 系サービス） / `platform`=Workers基盤 / `pricing`=料金に影響 / `security`）・`headline`（何が変わるかを言い切る日本語見出し。例「利用者が画面を閉じても、処理が最後まで続く」）・`use`（使いどころ等1〜3行の配列）・任意で `warn`（料金開始日など、行動が要る注意1文）
-  - **図（文章より図が主）**: 次の少なくとも1つを入れる。`before`/`after` = 処理の流れを2〜4段の `[{"label": "短い名詞", "note": "補足(任意)"}]` で（before=これまで・after=これから。新しい仕組みだけなら after のみ）。`stats` = 記事中の数値 `[{"value": "0.25 秒", "label": "書き込みが全拠点に届くまで"}]`（2〜3個、記事に無い数値を作らない）
+  - **各highlightの中身は、選んだ記事ごとにサブエージェントを1つ立てて作らせる。** Agent ツールを `subagent_type: "general-purpose"` で、選んだ件数ぶん**1つのメッセージでまとめて**呼ぶ。各サブエージェントには下のテンプレートの `{…}` を埋めて渡す（`body_path` は `.raw/cloudflare.json` の item にある）。**あなた自身は本文ファイルを読まない**（ブログの本文は1件で1万字前後あり、5件ぶん積むとコンテキストを圧迫する）。返ってきた JSON オブジェクトを選んだ順に `highlights` に並べる。validate がハイライトで落ちたら、落ちた1件だけをあなたが直す（本文を読み直す必要があるなら、その1件だけ同じテンプレートでサブエージェントを立て直す）
+
+    ```text
+    Cloudflare 公式の発表1件を、技術レポートの「図カード」1枚分の JSON にしてください。
+
+    記事: {title}
+    URL: {url}
+    本文ファイル: {body_path}
+    種別の目安: {blog か changelog}
+
+    手順:
+    1. 本文ファイルを Read で全部読む（ほかのファイルは読まない。ファイルを書かない。Web を見ない）
+    2. 記事の本質（何が変わり、誰の何に効くか）をつかみ、次の JSON オブジェクトを1つだけ返す。前後に説明文やコードフェンスを付けない
+
+    {"title": "原題のまま", "url": "上の URL", "product": "製品名",
+     "kind": "agent|platform|pricing|security",
+     "headline": "何が変わるかを言い切る日本語見出し",
+     "essence": "記事の本質を1〜2文（任意）",
+     "figures": [ 図を1〜3個 ],
+     "warn": "料金開始日など、行動が要る注意1文（無ければキーごと省略）",
+     "use": ["使いどころ 1〜3行"]}
+
+    kind: agent=AI（モデル・エージェント・AI 系サービス）/ platform=Workers 基盤 / pricing=料金に影響 / security
+
+    図の型（type）と形。記事の本質に合う型を選ぶ:
+    | type | 使う場面 | 形 |
+    |---|---|---|
+    | flow | 処理の順番が変わる・新しい処理の流れ | before?/after: 2〜5段の [{label, note?}] |
+    | sequence | 誰と誰がどの順でやり取りするか（リクエストの経路、エージェント間の受け渡し） | actors: 2〜4個の名前、steps: [{from, to, label}]（2〜8個、from/to は actors のどれか） |
+    | layers | 部品の構成・どこに何が入るか | layers: 2〜5段の [{label, items: [文字列 1〜6個]}]（上が利用者側） |
+    | compare | 違いの表（これまで/これから、プラン別、提供元別） | columns: 2〜4個の見出し、rows: [{label, cells: [columns と同数]}]（1〜6行） |
+    | timeline | 日付の決まった出来事（切り替え日・廃止日・料金開始日） | events: 2〜6個の [{date, label, note?}] |
+    | split | 当てはまる/当てはまらないの二分（対応が要る人と要らない人など） | left/right: {label, items: [文字列 1〜5個]} |
+    | stats | 記事中の数値 | items: 2〜3個の [{value, label}] |
+    各図は任意で "caption"（図が何を示すかの1文）を持てる。例: {"type": "compare", "caption": "…", "columns": ["これまで", "これから"], "rows": [{"label": "…", "cells": ["…", "…"]}]}
+
+    型の選び方:
+    - flow は処理の順番が実際に変わるときだけ。1段だけのフローは作らない（before も after も2段以上）
+    - 表の形をした変化（ステータスコード、上限値、プラン別の差）は compare
+    - 日付の決まった出来事は timeline。誰が対応すべきかの話は split。構成の話は layers。リクエストの経路やエージェント間の受け渡しは sequence
+    - 図は1〜3個。違う型を組み合わせてよい（例: timeline + split）
+    - stats の value は単位込みの文字列（例 {"value": "0.25 秒", "label": "書き込みが全拠点に届くまで"}）。数値型にしない
+    - 事実は本文に書かれたことだけ。本文に無い数値・日付・製品名を作らない
+    - label・items は短い名詞句。日本語で、製品名以外のカタカナ語・略語を並べない
+    ```
   - highlightに選んだ記事も `blog`/`changelog` には残してよい（表示時に「ほかの発表」から自動で除かれる）
 - **`oss_ranking`（LLM & AGENTS）** と **`oss_ranking_general`（TOOLS & APPS）**: `.raw/ghtrend.json` の各リポジトリを、`config/sources.json` の `ranking_keywords` にリポジトリ名または `description` がマッチ（大文字小文字無視）するかで振り分ける。**マッチ → `oss_ranking`**（LLM・エージェント系）、**非マッチ → `oss_ranking_general`**（ツール・CLI・アプリ等の汎用トレンド）。**それぞれトレンド順のまま最大10件**、`rank` は各配列で1から独立に連番、`note` は description を踏まえた1行の日本語説明。どちらか一方が0件ならそのキーは省略してよい
 

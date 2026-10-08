@@ -1,0 +1,442 @@
+{
+  "run_id": 0,
+  "date": "2026-07-07",
+  "generated_at": "2026-07-07T03:00:00.000Z",
+  "macro_summary": [
+    "coding agentの実行基盤と観測性が主要テーマでした。",
+    "MCPと永続状態の設計が複数ソースで重なっています。",
+    "Cloudflare D1やRust TUIなど実装寄りの記事が候補に残りました。"
+  ],
+  "stories": [
+    {
+      "cluster_id": "s01",
+      "translated_title": "coding agent実行基盤、MCP観測性まで実装論が具体化",
+      "match_score": 86,
+      "quality_score": 90,
+      "composite_score": 87,
+      "is_serendipity": false,
+      "topics": [
+        "coding agent",
+        "mcp",
+        "observability"
+      ],
+      "summary": "coding agentの実行基盤をどう分割するかが具体的に議論されています。MCPサーバーの観測性まで含めて、運用時に必要な境界が見えます。",
+      "selection_reason": "重点領域のcoding agentとMCPに直接関係し、複数ソースで重複観測されたため。",
+      "sections": {
+        "discussion": "HNでは実行ログの粒度と安全なツール権限が主な論点でした。",
+        "perspectives": "小さなプロセス分割はデバッグしやすい一方、状態共有と権限設計が複雑になります。",
+        "quick_questions": [
+          {
+            "q": "MCPの観測性で最初に見るべきものは何ですか。",
+            "a": "ツール呼び出し、失敗理由、入力サイズ、レイテンシです。"
+          },
+          {
+            "q": "ローカル実行とリモート実行の差は何ですか。",
+            "a": "権限境界と永続化の責任が大きく変わります。"
+          }
+        ],
+        "did_you_know": "MCPはツール提供側と利用側の境界を明示するため、監査ログとの相性が良い設計です。"
+      },
+      "items": [
+        {
+          "id": "ITEM_AGENT_RUNTIME",
+          "url": "https://example.com/agent-runtime?a=1&b=2",
+          "title": "A practical runtime for coding agents",
+          "source": "hn",
+          "engagement": {
+            "points": 120,
+            "comments": 34,
+            "hn_object_id": "1001"
+          },
+          "published_at": "2026-07-07T00:00:00Z"
+        },
+        {
+          "id": "ITEM_MCP_OBSERVABILITY",
+          "url": "https://example.com/mcp-observability",
+          "title": "Observability patterns for MCP servers",
+          "source": "hn",
+          "engagement": {
+            "points": 80,
+            "comments": 12,
+            "hn_object_id": "1002"
+          },
+          "published_at": "2026-07-06T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "cluster_id": "s02",
+      "translated_title": "Cloudflare D1でagent状態を扱う実装パターン",
+      "match_score": 78,
+      "quality_score": 65,
+      "composite_score": 74,
+      "is_serendipity": false,
+      "topics": [
+        "cloudflare",
+        "d1",
+        "agent state"
+      ],
+      "summary": "Cloudflare D1を使ってagentの状態を保存する構成が紹介されています。軽量なSQLite互換ストアを前提に、ローカルからWorkersへの移行もしやすくなります。",
+      "selection_reason": "Cloudflare Workers / D1の関心領域とagent状態管理が交差するため。",
+      "sections": {},
+      "items": [
+        {
+          "id": "ITEM_D1",
+          "url": "https://example.com/cloudflare-d1-agents",
+          "title": "Cloudflare D1でagentの状態を扱う",
+          "source": "zenn",
+          "engagement": {},
+          "published_at": "2026-07-06T10:00:00Z"
+        }
+      ]
+    }
+  ],
+  "release_watch": [
+    {
+      "repo": "anthropics/claude-code",
+      "releases": [
+        {
+          "tag": "v2.1.202",
+          "url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.202",
+          "published_at": "2026-07-07T04:00:00Z",
+          "notes_summary": "CLIの安定性改善とエージェント実行時のログが更新されています。"
+        }
+      ]
+    },
+    {
+      "repo": "openai/codex",
+      "releases": [
+        {
+          "tag": "v0.18.0",
+          "url": "https://github.com/openai/codex/releases/tag/v0.18.0",
+          "published_at": "2026-07-07T02:00:00Z",
+          "notes_summary": "ローカル実行フローとツール呼び出しの扱いが改善されています。"
+        }
+      ]
+    }
+  ],
+  "cloudflare_watch": {
+    "highlights": [
+      {
+        "title": "AI Gateway - Standardize provider credential error responses in AI Gateway",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-05-provider-credential-errors/",
+        "product": "AI Gateway",
+        "kind": "agent",
+        "headline": "AI の提供元にキーを拒否されたとき、どの提供元でも同じ「401」が返る",
+        "essence": "提供元ごとにばらばらだった「キーが違う」の応答が1つにそろう。エラー処理の分岐が1本で済む。",
+        "figures": [
+          {
+            "type": "compare",
+            "caption": "キーが拒否されたときの応答",
+            "columns": [
+              "これまで",
+              "これから"
+            ],
+            "rows": [
+              {
+                "label": "HTTP ステータス",
+                "cells": [
+                  "403 / 402 / 500(提供元で違う)",
+                  "401"
+                ]
+              },
+              {
+                "label": "エラー番号",
+                "cells": [
+                  "提供元の独自形式",
+                  "2009"
+                ]
+              },
+              {
+                "label": "Vertex への再試行",
+                "cells": [
+                  "500 として再試行する",
+                  "再試行しない"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "stats",
+            "items": [
+              {
+                "value": "401",
+                "label": "キー拒否時の HTTP ステータス"
+              },
+              {
+                "value": "2009",
+                "label": "共通のエラー番号"
+              }
+            ]
+          }
+        ],
+        "warn": "403・402・500 でキーの誤りを判定しているコードは、401 を見るよう直す必要がある",
+        "use": [
+          "AI Gateway の REST API(POST /ai/run)を呼ぶアプリのエラー処理"
+        ]
+      },
+      {
+        "title": "The keys to the Internet change on October 11. Are you ready?",
+        "url": "https://blog.cloudflare.com/root-ksk-2024-rollover/",
+        "product": "DNS / 1.1.1.1",
+        "kind": "security",
+        "headline": "10月11日に DNS の大元の鍵が替わる。古い鍵しか知らないリゾルバーはサイトに届かなくなる",
+        "essence": "DNSSEC の検証に使うルートの鍵が KSK-2017 から KSK-2024 に替わる。新しい鍵を信頼していないリゾルバーは名前解決に失敗する。",
+        "figures": [
+          {
+            "type": "timeline",
+            "events": [
+              {
+                "date": "2025-01-11",
+                "label": "KSK-2024 をルートゾーンに公開",
+                "note": "この時点ではまだ署名に使わない"
+              },
+              {
+                "date": "2026-10-11",
+                "label": "KSK-2024 で署名を開始",
+                "note": "古い鍵だけのリゾルバーは失敗し始める"
+              },
+              {
+                "date": "2027-01-11",
+                "label": "KSK-2017 を失効"
+              }
+            ]
+          },
+          {
+            "type": "split",
+            "caption": "対応が要るのは、自前で DNSSEC 検証をしている人だけ",
+            "left": {
+              "label": "対応が要る",
+              "items": [
+                "DNSSEC を検証するリゾルバーを自前で運用している",
+                "トラストアンカーを手で設定している"
+              ]
+            },
+            "right": {
+              "label": "対応は不要",
+              "items": [
+                "Cloudflare DNS を使っているだけ",
+                "1.1.1.1 をリゾルバーに使っている"
+              ]
+            }
+          }
+        ],
+        "warn": "切り替えは 2026年10月11日。自前のリゾルバーは事前に readiness test で確認する",
+        "use": [
+          "DNSSEC を検証する DNS サーバーを自前で運用しているなら、新しい鍵を信頼しているか確認する"
+        ]
+      },
+      {
+        "title": "Building an evidence-grounded agentic security operations harness on Cloudflare",
+        "url": "https://blog.cloudflare.com/agentic-security-operations/",
+        "product": "Cloudflare Managed Defense",
+        "kind": "agent",
+        "headline": "セキュリティ警報の下調べを、役割を分けた複数の AI エージェントが肩代わりする",
+        "essence": "証拠集めは決まった手順で、推論はモデルで、と役割を分ける。担当者には根拠つきの推奨だけが届く。",
+        "figures": [
+          {
+            "type": "sequence",
+            "caption": "1件の警報が担当者に届くまで",
+            "actors": [
+              "警報",
+              "エージェント (Workers)",
+              "判断モデル Clef",
+              "分析担当者"
+            ],
+            "steps": [
+              {
+                "from": "警報",
+                "to": "エージェント (Workers)",
+                "label": "警報が届く"
+              },
+              {
+                "from": "エージェント (Workers)",
+                "to": "エージェント (Workers)",
+                "label": "ネットワークの観測データを決まった手順で集める"
+              },
+              {
+                "from": "エージェント (Workers)",
+                "to": "判断モデル Clef",
+                "label": "集めた証拠を渡す"
+              },
+              {
+                "from": "判断モデル Clef",
+                "to": "エージェント (Workers)",
+                "label": "分析と採点を返す"
+              },
+              {
+                "from": "エージェント (Workers)",
+                "to": "分析担当者",
+                "label": "根拠つきの推奨を出す"
+              }
+            ]
+          },
+          {
+            "type": "flow",
+            "before": [
+              {
+                "label": "警報が一斉に届く"
+              },
+              {
+                "label": "担当者が手で証拠を集める",
+                "note": "関連する警報の束ねも人手"
+              },
+              {
+                "label": "判断"
+              }
+            ],
+            "after": [
+              {
+                "label": "警報が一斉に届く"
+              },
+              {
+                "label": "エージェントが証拠を集める"
+              },
+              {
+                "label": "モデルが採点"
+              },
+              {
+                "label": "担当者が推奨を確認"
+              }
+            ]
+          }
+        ],
+        "use": [
+          "エージェントを作るときに「証拠集めは決まった手順、推論はモデル」と分ける設計の実例"
+        ]
+      },
+      {
+        "title": "Log Explorer - Query Log Explorer datasets from Observability Logs",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-07-log-search-in-observability-logs/",
+        "product": "Workers Observability / Log Explorer",
+        "kind": "platform",
+        "headline": "Workers のログと Log Explorer のログを、1つの画面で同じ SQL で調べられる",
+        "figures": [
+          {
+            "type": "layers",
+            "caption": "Logs ページの中身(上が利用者側)",
+            "layers": [
+              {
+                "label": "Observability の Logs ページ",
+                "items": [
+                  "共通の絞り込み",
+                  "SQL エディタ",
+                  "グラフ",
+                  "保存済みクエリ"
+                ]
+              },
+              {
+                "label": "調べられるログ",
+                "items": [
+                  "Workers の実行ログ",
+                  "HTTP リクエストのログ",
+                  "ファイアウォールのイベント"
+                ]
+              },
+              {
+                "label": "保存先",
+                "items": [
+                  "Workers Observability",
+                  "Log Explorer のデータセット"
+                ]
+              }
+            ]
+          }
+        ],
+        "use": [
+          "Workers の実行ログと HTTP リクエストのログを並べて原因を追う"
+        ]
+      },
+      {
+        "title": "Introducing Web Search API via AI Gateway",
+        "url": "https://blog.cloudflare.com/introducing-web-search-api/",
+        "product": "AI Gateway",
+        "kind": "agent",
+        "headline": "エージェントが検索してから読むようになる",
+        "essence": "URL を当て推量で開く代わりに、AI Gateway 経由で検索してから読む。",
+        "figures": [
+          {
+            "type": "flow",
+            "before": [
+              {
+                "label": "URL を推測"
+              },
+              {
+                "label": "404"
+              }
+            ],
+            "after": [
+              {
+                "label": "AI Gateway で検索"
+              },
+              {
+                "label": "検索結果の URL を読む",
+                "note": "最新の情報に届く"
+              }
+            ]
+          }
+        ],
+        "use": [
+          "最新情報が要るエージェントに"
+        ]
+      }
+    ],
+    "blog": [
+      {
+        "title": "Introducing Web Search API via AI Gateway",
+        "url": "https://blog.cloudflare.com/introducing-web-search-api/",
+        "published_at": "2026-10-02T13:00:00Z",
+        "summary": "AI GatewayからWeb検索APIを呼べるようになりました。"
+      },
+      {
+        "title": "Bridging technical depth and usability: The story behind Radar’s redesign",
+        "url": "https://blog.cloudflare.com/radar-redesign/",
+        "published_at": "2026-10-08T13:00:00Z",
+        "summary": "Cloudflare Radar の画面を作り直し、専門外の人も世界の通信状況を読めるようにした。"
+      }
+    ],
+    "changelog": [
+      {
+        "title": "AI Gateway - Standardize provider credential error responses in AI Gateway",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-05-provider-credential-errors/",
+        "published_at": "2026-10-05T00:00:00Z"
+      }
+    ]
+  },
+  "oss_ranking": [
+    {
+      "rank": 1,
+      "repo": "addyosmani/agent-skills",
+      "url": "https://github.com/addyosmani/agent-skills",
+      "note": "coding agent向けskill集として注目されています。"
+    },
+    {
+      "rank": 2,
+      "repo": "modelcontextprotocol/servers",
+      "url": "https://github.com/modelcontextprotocol/servers",
+      "note": "MCP連携の実装例をまとめた基盤リポジトリです。"
+    }
+  ],
+  "oss_ranking_general": [
+    {
+      "rank": 1,
+      "repo": "pocketbase/pocketbase",
+      "url": "https://github.com/pocketbase/pocketbase",
+      "note": "1バイナリで動くGo製のバックエンドとして人気です。"
+    }
+  ],
+  "fetch_status": [
+    {
+      "source": "hn",
+      "ok": true,
+      "count": 3,
+      "note": "fixture"
+    },
+    {
+      "source": "zenn",
+      "ok": true,
+      "count": 3,
+      "note": "fixture"
+    }
+  ]
+}

@@ -13,6 +13,44 @@ function nonEmpty(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+// §4.9 の図の型ごとの形。問題点の文の配列を返す(空なら合格)
+const count = (arr, min, max) => Array.isArray(arr) && arr.length >= min && arr.length <= max;
+const strings = (arr, min, max) => count(arr, min, max) && arr.every(nonEmpty);
+const steps = (arr) => count(arr, 2, 5) && arr.every((s) => nonEmpty(s?.label));
+const FIGURE_CHECKS = {
+  flow: (f) => [
+    ...(f.before !== undefined && !steps(f.before) ? ['before must be 2-5 [{label, note?}]'] : []),
+    ...(!steps(f.after) ? ['after must be 2-5 [{label, note?}]'] : []),
+  ],
+  sequence: (f) => {
+    if (!strings(f.actors, 2, 4)) return ['actors must be 2-4 names'];
+    if (!count(f.steps, 2, 8)) return ['steps must have 2-8 entries'];
+    return f.steps.flatMap((s, i) => [
+      ...(!f.actors.includes(s?.from) ? [`step ${i + 1} from "${s?.from}" is not in actors`] : []),
+      ...(!f.actors.includes(s?.to) ? [`step ${i + 1} to "${s?.to}" is not in actors`] : []),
+      ...(!nonEmpty(s?.label) ? [`step ${i + 1} label must be non-empty`] : []),
+    ]);
+  },
+  layers: (f) => (count(f.layers, 2, 5) && f.layers.every((l) => nonEmpty(l?.label) && strings(l?.items, 1, 6))
+    ? [] : ['layers must be 2-5 [{label, items: 1-6 strings}]']),
+  compare: (f) => {
+    if (!strings(f.columns, 2, 4)) return ['columns must be 2-4 headings'];
+    if (!count(f.rows, 1, 6)) return ['rows must have 1-6 entries'];
+    return f.rows.flatMap((r, i) => [
+      ...(!nonEmpty(r?.label) ? [`row ${i + 1} label must be non-empty`] : []),
+      ...(!Array.isArray(r?.cells) || r.cells.length !== f.columns.length ? [`row ${i + 1} cells must have ${f.columns.length} entries (same as columns)`] : []),
+    ]);
+  },
+  timeline: (f) => {
+    if (!count(f.events, 2, 6)) return ['events must have 2-6 entries'];
+    return f.events.flatMap((e, i) => (nonEmpty(e?.date) && nonEmpty(e?.label) ? [] : [`event ${i + 1} must have date and label`]));
+  },
+  split: (f) => ['left', 'right'].flatMap((side) => (nonEmpty(f[side]?.label) && strings(f[side]?.items, 1, 5)
+    ? [] : [`${side} must be {label, items: 1-5 strings}`])),
+  stats: (f) => (count(f.items, 2, 3) && f.items.every((s) => nonEmpty(s?.value) && nonEmpty(s?.label))
+    ? [] : ['items must be 2-3 [{value, label}]']),
+};
+
 try {
   const file = process.argv[2];
   if (!file) throw new Error('usage: validate.mjs <stories.json>');
@@ -86,8 +124,19 @@ try {
           for (const h of entries) {
             for (const key of ['title', 'url', 'headline']) if (!nonEmpty(h?.[key])) errors.push(violation('cloudflare_watch', `highlight ${key} must be non-empty`));
             if (!['agent', 'platform', 'pricing', 'security'].includes(h?.kind)) errors.push(violation('cloudflare_watch', `highlight kind must be agent|platform|pricing|security: ${h?.headline}`));
-            if (!isSteps(h?.before) || !isSteps(h?.after)) errors.push(violation('cloudflare_watch', `highlight before/after must be [{label, note?}]: ${h?.headline}`));
-            if (!(h?.before?.length || h?.after?.length || h?.stats?.length)) errors.push(violation('cloudflare_watch', `highlight needs a figure (before/after/stats): ${h?.headline}`));
+            if (Object.hasOwn(h ?? {}, 'figures')) {
+              if (!Array.isArray(h.figures) || h.figures.length < 1 || h.figures.length > 3) errors.push(violation('cloudflare_watch', `highlight figures must have 1-3 entries: ${h?.headline}`));
+              else h.figures.forEach((f, i) => {
+                const check = Object.hasOwn(FIGURE_CHECKS, f?.type) ? FIGURE_CHECKS[f.type] : null;
+                const problems = check ? check(f) : [`unknown type (flow|sequence|layers|compare|timeline|split|stats)`];
+                if (f?.caption !== undefined && !nonEmpty(f.caption)) problems.push('caption must be a non-empty string');
+                for (const p of problems) errors.push(violation('cloudflare_watch', `highlight figure ${i + 1} (${f?.type}): ${p}: ${h?.headline}`));
+              });
+            } else {
+              // 旧形式(〜2026-10-08)。過去の stories.json を描けるよう、当時の基準のまま検査する
+              if (!isSteps(h?.before) || !isSteps(h?.after)) errors.push(violation('cloudflare_watch', `highlight before/after must be [{label, note?}]: ${h?.headline}`));
+              if (!(h?.before?.length || h?.after?.length || h?.stats?.length)) errors.push(violation('cloudflare_watch', `highlight needs figures (or legacy before/after/stats): ${h?.headline}`));
+            }
             if (!Array.isArray(h?.use) || h.use.length === 0) errors.push(violation('cloudflare_watch', `highlight use must be a non-empty array: ${h?.headline}`));
           }
           continue;
