@@ -46,6 +46,7 @@
 | **M7** | **コンテンツタブ**。レポート内の「サーベイ / リリース / ランキング」をトップバーのセグメンテッドコントロールで切り替え（デフォルト=サーベイ）。URLハッシュルーティング（`#releases` / `#ranking`、ブラウザバック対応）。JSなし環境では従来どおり全セクション縦並び。該当ブロックが無い日はタブ非表示 | **実装済み**（2026-07-08） |
 | **M6** | **定点ウォッチセクション**。ストーリー枠と独立に、レポート下部へ固定セクション2つを新設: ①`RELEASE WATCH` — GitHub Releasesを**リポジトリごとに分離**表示（claude-code / codex）。リリースノート本文（`notes`、1500字まで取得）から変更内容の1〜2文要約付き。`github-release` itemはストーリー候補から除外。②`OSS RANKING` — GitHub Trendingを2エリアに分割表示。`ranking_keywords`（skill/agent/mcp等）マッチ＝`LLM & AGENTS`（`oss_ranking`）、非マッチ＝`TOOLS & APPS`（`oss_ranking_general`）。各エリアをトレンド順に最大10件、1行説明付きでランキング表示。stories.jsonの任意ブロック（§5.1）として保持し、無い日はセクション／エリアごと省略 | **実装済み**（2026-07-08、2エリア化 2026-07-13） |
 | **M5** | **認証強化とアーカイブ索引の改善**。①`/auth?key=`・`?key=` クエリ認証を廃止（URLにキーが載る経路の根絶。認証は `X-Winnow-Key` ヘッダとセッションCookieのみ）。②Cookieを `__Host-wk` + **HMAC-SHA256署名付き30日トークン**（`<exp>.<sig>` 形式、生キー非含有、タイミングセーフ比較、残り7日でスライディング更新）に変更。③レポートフッターにログイン導線（閲覧モード=LOGIN / オーナー=LOGOUT、JSで出し分け）。④アーカイブ索引を刷新: 月別グルーピング+全レポート横断のインクリメンタル検索（見出し・topics・マクロ要約をAND検索、マッチ記事の提示付き、no-JSでもリスト閲覧可） | **実装済み**（2026-07-08） |
+| **M8** | **CLOUDFLARE 図カードの図を内容で選ぶ**（§4.9）。図の型を flow 以外にも増やし、ハイライト記事は本文全文を読んで本質を図にする | 実装中（2026-10-09） |
 
 フィードバックストアはSQLite（D1互換DDL）・受信はHTTP POSTで設計したため、M3はserve.mjsと同一コントラクトのWorker追加のみで成立した。item ID（§4.2のURL正規化仕様）は今後も不変とする。
 
@@ -172,6 +173,27 @@ HTMLは**単一ビュー**（v0.3/M4で2モード切替を廃止）:
 
 fetch層の成否（ソース名 / 成功・失敗 / 件数 / 失敗理由1行）を stories.json の `fetch_status` に記録し、レポート末尾に「取得状況」セクションとして必ず表示する。
 
+### 4.9 CLOUDFLARE 図カード（M8）
+
+背景: 2026-10-05〜08 のハイライト20件のうち17件が before/after のフロー図だった。描画側が flow と stats しか描けず、SKILL.md も「before/after か stats を少なくとも1つ」と求めていたため。1箱だけのフロー（DNS 鍵交換）や、本来は表であるもの（AI Gateway の 403/402/500→401）までフローにされていた。
+
+要件:
+1. **図の型は記事の本質で選ぶ。** 処理の流れが変わる記事だけが flow。各ハイライトは `figures`（1〜3個）を持ち、型は次の列挙から選ぶ。生の HTML/SVG は書かせない（描画は `render.mjs` と CSS が担い、PC 横／スマホ縦にリフローする）
+   | type | 使う場面 | 形 |
+   |---|---|---|
+   | `flow` | 処理の順番が変わる・新しい処理の流れ | `before?`/`after`: 2〜5段の `[{label, note?}]` |
+   | `sequence` | 誰と誰がどの順でやり取りするか（リクエストの経路、エージェント間の受け渡し） | `actors`: 2〜4個の名前、`steps`: `[{from, to, label}]`（2〜8個、from/to は actors のどれか） |
+   | `layers` | 部品の構成・どこに何が入るか | `layers`: 2〜5段の `[{label, items: [文字列 1〜6個]}]`（上が利用者側） |
+   | `compare` | 違いの表（これまで/これから、プラン別、提供元別） | `columns`: 2〜4個の見出し、`rows`: `[{label, cells: [columns と同数]}]`（1〜6行） |
+   | `timeline` | 日付の決まった出来事（切り替え日・廃止日・料金開始日） | `events`: 2〜6個の `[{date, label, note?}]` |
+   | `split` | 当てはまる/当てはまらないの二分（対応が要る人と要らない人など） | `left`/`right`: `{label, items: [文字列 1〜5個]}` |
+   | `stats` | 記事中の数値 | `items`: 2〜3個の `[{value, label}]`（記事に無い数値を作らない） |
+   各 figure は任意で `caption`（図が何を示すかの1文）を持てる。
+2. **本文全文を読んでから図にする。** `scripts/fetch/cloudflare.sh` は各記事の本文全文を `.raw/cloudflare/<id>.txt` に保存する（notes の1500字は選定用に残す）。メインはタイトルと notes で選定（「外す順」）し、選んだハイライトごとにサブエージェントを1つ立てて本文ファイルを読ませ、その1件分の JSON だけを返させる。メインのコンテキストに本文を積まない
+3. **1件あたりは深くてよい、件数は増やさない。** 最大5件のまま。`essence`（任意、記事の本質を1〜2文）と figures 最大3個までを許す。図が主・文は補助
+4. **過去の stories.json も描ける。** `figures` が無いハイライトは従来の `before`/`after`/`stats` から描く
+5. `validate.mjs` が型と形を検査する。未知の type、段数・個数の範囲外、sequence の from/to が actors に無い、compare の cells 数が columns と違う、は失敗
+
 ## 5. データモデル（SQLite、D1互換DDL）
 
 ```sql
@@ -252,8 +274,10 @@ itemの**有効判定**は「`decided_at` が最新のイベントのverdict。�
   ],
   "cloudflare_watch": {
     "highlights": [{"title": "原題", "url": "…", "product": "Durable Objects", "kind": "agent|platform|pricing|security",
-                    "headline": "日本語見出し", "before": [{"label": "…", "note": "任意"}], "after": [{"label": "…"}],
-                    "stats": [{"value": "0.25 秒", "label": "…"}], "warn": "任意", "use": ["…"]}],
+                    "headline": "日本語見出し", "essence": "任意・本質1〜2文",
+                    "figures": [{"type": "flow|sequence|layers|compare|timeline|split|stats", "caption": "任意", "…": "§4.9 の形"}],
+                    "warn": "任意", "use": ["…"]}],
+                    // 旧形式(〜2026-10-08): figures の代わりに before/after/stats を直に持つ。描画は引き続き対応
     "blog":      [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}],
     "changelog": [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}]
   },
