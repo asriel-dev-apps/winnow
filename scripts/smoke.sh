@@ -326,6 +326,17 @@ else
   fail "learned_profile" "$(tr '\n' ' ' < "$tmpdir/learned-candidates.err")"
 fi
 
+# jp-lint: 日本語のフィールドは指摘され、url は対象外。リンターが無い環境では skipped を返して通る
+printf '%s' '{"x":{"summary":"このツールは静かに壊れる。速い。軽い。安い。","url":"静かに壊れる"}}' > "$tmpdir/jp.json"
+jp_out="$(node scripts/jp-lint.mjs "$tmpdir/jp.json")"
+if grep -q '"skipped"' <<<"$jp_out"; then
+  pass "jp_lint (skipped: no linter)"
+elif grep -q '"path": "x.summary"' <<<"$jp_out" && ! grep -q '"path": "x.url"' <<<"$jp_out"; then
+  pass "jp_lint"
+else
+  fail "jp_lint" "$jp_out"
+fi
+
 if [[ "$failures" -eq 0 ]]; then
   echo "PASS smoke"
   exit 0

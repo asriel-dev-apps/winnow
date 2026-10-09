@@ -128,6 +128,18 @@ stories.json に任意ブロックを追加する（データが無ければ省�
 
 結果を `output/YYYY-MM-DD/stories.json` に書く。スキーマはREQUIREMENTS.md §5.1に厳密に従う（`run_id` はstep 2の値）。
 
+### 4.9 日本語の推敲（yomiyasu）
+
+stories.json を書き終えたら、validate の前に日本語を整える。
+
+1. Skill ツールで `yomiyasu`（plugin 名つきでは `yomiyasu:yomiyasu`）を読み込み、その原則で日本語の文を見直す。サブエージェントが書いた CLOUDFLARE のハイライトも対象にする。ただし次の点は yomiyasu より優先する:
+   - 「です・ます」にそろえない。体言止めや短い言い切りのままでよい
+   - 箇条書き・表・図のラベルを地の文に書き直さない
+   - 文の形は、画面でひと目で読めることを優先する（短く、1文1要点）
+   - 出力フォーマット（「書き直した本文」「変えたところ」等）は使わない。stories.json を直接直すだけ
+2. `node scripts/jp-lint.mjs output/YYYY-MM-DD/stories.json` を実行し、`findings` の各項目を `path` のフィールドで見直す。指摘は候補なので、意味が変わるなら直さない。直すのは1回だけで、再実行の往復はしない
+3. `{"skipped": ...}` が出たらリンターが無い。1 だけで進め、最終報告に書く
+
 ### 5. 検証 → 書き戻し → レンダリング
 
 ```bash
