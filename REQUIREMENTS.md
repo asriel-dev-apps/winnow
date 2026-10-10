@@ -225,7 +225,8 @@ fetch層の成否（ソース名 / 成功・失敗 / 件数 / 失敗理由1行�
    | `gains[].note` | 32 |
    | `who` | 60 |
    | `warn` | 80 |
-   個数の上限: `changes` 1〜3行、`gains` 0〜2個。`overview` 以外の図（M8 の `figures`）は持たない
+   必須は `headline` と `overview` だけ。`essence`・`changes`・`gains`・`warn`・`who` は省いてよい（本文に旧い状態が無い記事は `changes` を持たない。2026-10-10 の Deno 合流がその例）。持つなら `changes` は1〜3行、`gains` は1〜2個で、文字列の欄はどれも空でない文字列。ハイライトは最大5件。`overview` 以外の図（M8 の `figures`）は持たない
+   `overview` が `compare` のとき、列見出しに「これまで」「これから」を使わない（新旧は `changes` か `before_overview` で見せる。要件1を機械で守る）
 6. **配色**: ライトモードは A（生成り地に黒、流れ図の点は黒）、ダークモードは C（黒地、流れ図の点は金）。色は灰色系と金1色だけ。行頭に矢印などの記号を置かない（つなぎは線で描く）
 7. **過去の stories.json も描ける。** `overview` が無いハイライトは M8（`figures`）または旧形式（`before`/`after`/`stats`）として従来どおり描く
 8. 日本語は §4.4 と同じく yomiyasu で推敲する（SKILL.md 4.9）

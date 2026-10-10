@@ -107,7 +107,7 @@ stories.json に任意ブロックを追加する（データが無ければ省�
      "who": "誰に関係するか1行（60字まで）"}
 
     kind: agent=AI（モデル・エージェント・AI 系サービス）/ platform=Workers 基盤 / pricing=料金に影響 / security
-    changes は1〜3行、gains は0〜2個。
+    changes は1〜3行、gains は1〜2個。書けることが無ければキーごと省く（必須は headline と overview）。overview を compare にするとき、列見出しに「これまで」「これから」を使わない。
 
     全体図（overview）の型と形。記事の全体像に合う型を1つ選ぶ:
     | type | 使う場面 | 形 |
