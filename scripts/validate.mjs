@@ -60,32 +60,37 @@ const chars = (s) => [...String(s ?? '')].length;
 const tooLong = (path, value, max) => (typeof value === 'string' && chars(value) > max ? [`${path} must be at most ${max} chars (got ${chars(value)})`] : []);
 const LABEL_MAX = 16;
 const NOTE_MAX = 24;
-// 図の中の label/items/actors/columns は16字、note/caption は24字(コードポイント数)
-function figureLengths(value, path) {
-  if (Array.isArray(value)) return value.flatMap((v, i) => figureLengths(v, `${path}[${i}]`));
+// 空でない文字列で、max があればその字数以下
+const str = (path, value, max) => (nonEmpty(value) ? (max ? tooLong(path, value, max) : []) : [`${path} must be a non-empty string`]);
+// 図の中の label/items/actors/columns は16字、note/caption は24字(コードポイント数)。compare の cells は空でない文字列だけ
+function figureFields(value, path) {
+  if (Array.isArray(value)) return value.flatMap((v, i) => figureFields(v, `${path}[${i}]`));
   if (!value || typeof value !== 'object') return [];
   return Object.entries(value).flatMap(([key, v]) => {
     const p = `${path}.${key}`;
-    if (key === 'label') return tooLong(p, v, LABEL_MAX);
-    if (key === 'note' || key === 'caption') return tooLong(p, v, NOTE_MAX);
-    if (['items', 'actors', 'columns'].includes(key) && Array.isArray(v)) {
-      return v.flatMap((x, i) => (typeof x === 'string' ? tooLong(`${p}[${i}]`, x, LABEL_MAX) : figureLengths(x, `${p}[${i}]`)));
+    if (key === 'label') return str(p, v, LABEL_MAX);
+    if (key === 'note' || key === 'caption') return str(p, v, NOTE_MAX);
+    if (['items', 'actors', 'columns', 'cells'].includes(key) && Array.isArray(v)) {
+      // stats の items だけは {value, label} の配列
+      return v.flatMap((x, i) => (key === 'items' && x && typeof x === 'object' ? figureFields(x, `${p}[${i}]`) : str(`${p}[${i}]`, x, key === 'cells' ? 0 : LABEL_MAX)));
     }
-    return typeof v === 'object' ? figureLengths(v, p) : [];
+    return typeof v === 'object' ? figureFields(v, p) : [];
   });
 }
 function overviewProblems(f, path) {
   const check = Object.hasOwn(OVERVIEW_CHECKS, f?.type) ? OVERVIEW_CHECKS[f.type] : null;
   if (!check) return [`${path}: unknown type (flow|sequence|layers|compare|timeline|split|stats)`];
-  const problems = check(f);
-  if (f.caption !== undefined && !nonEmpty(f.caption)) problems.push('caption must be a non-empty string');
-  return [...problems.map((p) => `${path} (${f.type}): ${p}`), ...figureLengths(f, path)];
+  return [...check(f).map((p) => `${path} (${f.type}): ${p}`), ...figureFields(f, path)];
 }
 function m9Problems(h) {
   const problems = [];
   if (Object.hasOwn(h, 'figures')) problems.push('overview and figures cannot both be present');
-  problems.push(...tooLong('headline', h.headline, 40), ...tooLong('essence', h.essence, 90), ...tooLong('who', h.who, 60), ...tooLong('warn', h.warn, 80));
+  problems.push(...tooLong('headline', h.headline, 40));
+  for (const [key, max] of [['essence', 90], ['who', 60], ['warn', 80]]) if (Object.hasOwn(h, key)) problems.push(...str(key, h[key], max));
   problems.push(...overviewProblems(h.overview, 'overview'));
+  if (h.overview?.type === 'compare' && Array.isArray(h.overview.columns) && h.overview.columns.some((c) => c === 'これまで' || c === 'これから')) {
+    problems.push('overview (compare): columns must not be "これまで"/"これから" (show old/new in changes or before_overview)');
+  }
   if (Object.hasOwn(h, 'before_overview')) {
     if (h.before_overview?.type !== h.overview?.type) problems.push(`before_overview type "${h.before_overview?.type}" must match overview type "${h.overview?.type}"`);
     else problems.push(...overviewProblems(h.before_overview, 'before_overview'));
@@ -99,10 +104,10 @@ function m9Problems(h) {
     });
   }
   if (Object.hasOwn(h, 'gains')) {
-    if (!count(h.gains, 0, 2)) problems.push('gains must have 0-2 entries');
+    if (!count(h.gains, 1, 2)) problems.push('gains must have 1-2 entries');
     else h.gains.forEach((g, i) => {
       problems.push(...(nonEmpty(g?.title) ? tooLong(`gains[${i}].title`, g.title, 20) : [`gains[${i}].title must be non-empty`]));
-      problems.push(...tooLong(`gains[${i}].note`, g?.note, 32));
+      if (Object.hasOwn(g ?? {}, 'note')) problems.push(...str(`gains[${i}].note`, g.note, 32));
     });
   }
   return problems;
@@ -176,7 +181,7 @@ try {
       for (const [kind, entries] of Object.entries(watch)) {
         if (kind === 'highlights') {
           if (!Array.isArray(entries)) { errors.push(violation('cloudflare_watch', 'cloudflare_watch.highlights must be an array')); continue; }
-          if (entries.length > 6) errors.push(violation('cloudflare_watch', 'cloudflare_watch.highlights must have at most 6 entries'));
+          if (entries.length > 5) errors.push(violation('cloudflare_watch', 'cloudflare_watch.highlights must have at most 5 entries'));
           const isSteps = (v) => v === undefined || (Array.isArray(v) && v.every((s) => nonEmpty(s?.label)));
           for (const h of entries) {
             for (const key of ['title', 'url', 'headline']) if (!nonEmpty(h?.[key])) errors.push(violation('cloudflare_watch', `highlight ${key} must be non-empty`));

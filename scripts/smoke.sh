@@ -202,7 +202,7 @@ cf_case figures_4 fail '.cloudflare_watch.highlights[2].figures += .cloudflare_w
 cf_case figures_none fail '.cloudflare_watch.highlights[3].figures = []' 'highlight figures must have 1-3 entries'
 cf_case no_figure_no_legacy fail '.cloudflare_watch.highlights[3] |= del(.figures)' 'highlight needs figures (or legacy before/after/stats)'
 
-# overview カード。fixtures/stories.cloudflare-m9.json の [0] は flow、[1] は before_overview つき layers、[2] は compare
+# overview カード。fixtures/stories.cloudflare-m9.json の [0] は flow、[1] は before_overview つき layers、[2] は sequence(全幅)と changes だけ
 cf_fixture=fixtures/stories.cloudflare-m9.json
 h0='.cloudflare_watch.highlights[0]'
 # 文字数はコードポイントで数える。𠮷 は UTF-16 では2単位なので、.length で数えると41字になって落ちる
@@ -219,7 +219,20 @@ cf_case m9_warn_81 fail "${h0}.warn = \"あ\" * 81" 'highlight warn must be at m
 cf_case m9_step_label_17 fail "${h0}.overview.steps[0].label = \"あ\" * 17" 'highlight overview.steps[0].label must be at most 16 chars (got 17)'
 cf_case m9_changes_4 fail "${h0}.changes += [${h0}.changes[0]]" 'highlight changes must have 1-3 rows'
 cf_case m9_changes_0 fail "${h0}.changes = []" 'highlight changes must have 1-3 rows'
-cf_case m9_gains_3 fail "${h0}.gains += [${h0}.gains[0]]" 'highlight gains must have 0-2 entries'
+cf_case m9_gains_3 fail "${h0}.gains += [${h0}.gains[0]]" 'highlight gains must have 1-2 entries'
+cf_case m9_gains_0 fail "${h0}.gains = []" 'highlight gains must have 1-2 entries'
+# 文字列の欄に文字列以外・空文字が入ったら落とす
+cf_case m9_essence_object fail "${h0}.essence = {\"text\":\"あ\"}" 'highlight essence must be a non-empty string'
+cf_case m9_who_array fail "${h0}.who = [\"あ\"]" 'highlight who must be a non-empty string'
+cf_case m9_warn_number fail '.cloudflare_watch.highlights[2].warn = 401' 'highlight warn must be a non-empty string'
+cf_case m9_gain_note_object fail "${h0}.gains[0].note = {\"text\":\"あ\"}" 'highlight gains[0].note must be a non-empty string'
+cf_case m9_step_note_number fail "${h0}.overview.steps[0].note = 3" 'highlight overview.steps[0].note must be a non-empty string'
+compare_overview='.cloudflare_watch.highlights[2].overview = {"type":"compare","columns":["OpenAI","Vertex"],"rows":[{"label":"再試行","cells":["しない","しない"]}]}'
+cf_case m9_compare_ok pass "$compare_overview"
+cf_case m9_cell_object fail "$compare_overview | .cloudflare_watch.highlights[2].overview.rows[0].cells[0] = {\"text\":\"あ\"}" 'highlight overview.rows[0].cells[0] must be a non-empty string'
+cf_case m9_cell_empty fail "$compare_overview | .cloudflare_watch.highlights[2].overview.rows[0].cells[0] = \"\"" 'highlight overview.rows[0].cells[0] must be a non-empty string'
+cf_case m9_compare_old_new fail "$compare_overview | .cloudflare_watch.highlights[2].overview.columns = [\"これまで\",\"これから\"]" 'highlight overview (compare): columns must not be \"これまで\"/\"これから\"'
+cf_case m9_highlights_6 fail '.cloudflare_watch.highlights += .cloudflare_watch.highlights' 'cloudflare_watch.highlights must have at most 5 entries'
 cf_case m9_unknown_type fail "${h0}.overview.type = \"chart\"" 'highlight overview: unknown type'
 cf_case m9_flow_1step fail "${h0}.overview.steps |= .[:1]" 'highlight overview (flow): steps must be 2-7'
 cf_case m9_flow_8steps fail "${h0}.overview.steps += [${h0}.overview.steps[0]]" 'highlight overview (flow): steps must be 2-7'
@@ -230,6 +243,7 @@ unset cf_fixture
 if node scripts/render.mjs fixtures/stories.cloudflare-m9.json --out "$tmpdir/m9-render" >"$tmpdir/m9-render.out" 2>"$tmpdir/m9-render.err" &&
   [[ "$(grep -o 'class="cfCard cfCard9"' "$tmpdir/m9-render/report.html" | wc -l | tr -d ' ')" == 3 ]] &&
   grep -q 'class="cfTop side"' "$tmpdir/m9-render/report.html" &&
+  grep -A2 -F '<div class="cfTop">' "$tmpdir/m9-render/report.html" | grep -qF 'cfFig cfFig-sequence' &&
   grep -q '<ol class="cfLine"><li><b>アラート</b></li><li><b>証拠を集める</b><small>決まった手順のコード</small></li>' "$tmpdir/m9-render/report.html" &&
   grep -q '<p class="cfPairHead now">これから</p>' "$tmpdir/m9-render/report.html" &&
   grep -q '<span class="cfWho"><span>対象</span>WAF・DDoS 防御の利用企業' "$tmpdir/m9-render/report.html" &&
