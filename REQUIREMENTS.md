@@ -46,7 +46,8 @@
 | **M7** | **コンテンツタブ**。レポート内の「サーベイ / リリース / ランキング」をトップバーのセグメンテッドコントロールで切り替え（デフォルト=サーベイ）。URLハッシュルーティング（`#releases` / `#ranking`、ブラウザバック対応）。JSなし環境では従来どおり全セクション縦並び。該当ブロックが無い日はタブ非表示 | **実装済み**（2026-07-08） |
 | **M6** | **定点ウォッチセクション**。ストーリー枠と独立に、レポート下部へ固定セクション2つを新設: ①`RELEASE WATCH` — GitHub Releasesを**リポジトリごとに分離**表示（claude-code / codex）。リリースノート本文（`notes`、1500字まで取得）から変更内容の1〜2文要約付き。`github-release` itemはストーリー候補から除外。②`OSS RANKING` — GitHub Trendingを2エリアに分割表示。`ranking_keywords`（skill/agent/mcp等）マッチ＝`LLM & AGENTS`（`oss_ranking`）、非マッチ＝`TOOLS & APPS`（`oss_ranking_general`）。各エリアをトレンド順に最大10件、1行説明付きでランキング表示。stories.jsonの任意ブロック（§5.1）として保持し、無い日はセクション／エリアごと省略 | **実装済み**（2026-07-08、2エリア化 2026-07-13） |
 | **M5** | **認証強化とアーカイブ索引の改善**。①`/auth?key=`・`?key=` クエリ認証を廃止（URLにキーが載る経路の根絶。認証は `X-Winnow-Key` ヘッダとセッションCookieのみ）。②Cookieを `__Host-wk` + **HMAC-SHA256署名付き30日トークン**（`<exp>.<sig>` 形式、生キー非含有、タイミングセーフ比較、残り7日でスライディング更新）に変更。③レポートフッターにログイン導線（閲覧モード=LOGIN / オーナー=LOGOUT、JSで出し分け）。④アーカイブ索引を刷新: 月別グルーピング+全レポート横断のインクリメンタル検索（見出し・topics・マクロ要約をAND検索、マッチ記事の提示付き、no-JSでもリスト閲覧可） | **実装済み**（2026-07-08） |
-| **M8** | **CLOUDFLARE 図カードの図を内容で選ぶ**（§4.9）。図の型を flow 以外にも増やし、ハイライト記事は本文全文を読んで本質を図にする | 実装中（2026-10-09） |
+| **M8** | **CLOUDFLARE 図カードの図を内容で選ぶ**（§4.9）。図の型を flow 以外にも増やし、ハイライト記事は本文全文を読んで本質を図にする | 実装済み（2026-10-09） |
+| **M9** | **CLOUDFLARE 図カードを1枚の絵として読める形にする**（§4.10）。結論→全体図→これまで/これから→効果の順、文字数の上限を検査 | 実装中（2026-10-10） |
 
 フィードバックストアはSQLite（D1互換DDL）・受信はHTTP POSTで設計したため、M3はserve.mjsと同一コントラクトのWorker追加のみで成立した。item ID（§4.2のURL正規化仕様）は今後も不変とする。
 
@@ -194,6 +195,41 @@ fetch層の成否（ソース名 / 成功・失敗 / 件数 / 失敗理由1行�
 4. **過去の stories.json も描ける。** `figures` が無いハイライトは従来の `before`/`after`/`stats` から描く
 5. `validate.mjs` が型と形を検査する。未知の type、段数・個数の範囲外、sequence の from/to が actors に無い、compare の cells 数が columns と違う、は失敗
 
+### 4.10 CLOUDFLARE 図カードのレイアウト（M9）
+
+背景: M8 のカードは「見出し・要約の段落・図2〜3枚・使い道」が同じ重さで並び、文字が多く、上から下へ読んでも流れにならなかった（2026-10-09 ユーザー指摘）。案を3つ描いて比べ、C（結論先出し＋縦の流れ図）を骨組みに、A の「これまで/これから」表と配色を借りる形に決めた（https://claude.ai/artifact/TT7zcW78GC9w84FNv7SPUy）。
+
+カードの並び（上から）:
+1. **結論** `headline`（大きく1文）と `essence`（補足1〜2文）
+2. **全体図** `overview`（図1枚）。PC では結論の右に置く。ただし `sequence`・`compare` と、`before_overview` があるときは結論の下に全幅で置く。スマホでは常に結論の下
+3. **これまで/これから** `changes`（行ラベル・これまで・これからの3列の表）
+4. **どう良くなるか** `gains`（見出し＋短い説明のタイル）
+5. `warn`（対応が要るときだけ）
+6. 足元に `who`（誰に関係するか1行）と出典リンク
+
+要件:
+1. **全体図に新旧の印を付けない。** 全体図は「今の仕組み」を描くだけで、段ごとに「変わった/これまでどおり」を色分けしない。新旧を見せるのは `changes` の表か、`before_overview` の2図比較だけ
+2. **`before_overview` は記事自体が2つの状態を比べているときだけ。** `overview` と同じ type。PC は左右、スマホは上下に「これまで」「これから」の見出しつきで並べる
+3. **流れ図（`overview.type = "flow"`）は縦の線に点を打つ形で描く**（PC の右半分でもスマホでも同じ形）。形は `steps`: 2〜7段の `[{label, note?}]`。段の並びは本文と照らし、本文にある処理の段を落とさない
+4. **記事に書かれていない新旧の区別を作らない。** `changes` の「これまで」は記事に書かれた旧い状態だけ。新機能で旧い状態が無ければ「なし」と書くか、行ごと省く
+5. **文字数の上限を `validate.mjs` で検査する**（文字数はコードポイント数）。超えたら失敗:
+   | 欄 | 上限 |
+   |---|---|
+   | `headline` | 40 |
+   | `essence` | 90 |
+   | 図の段・項目のラベル（`label`、`items` の各要素、`actors`、`columns`） | 16 |
+   | 図の `note`・`caption` | 24 |
+   | `changes[].label` | 12 |
+   | `changes[].before` / `after` | 28 |
+   | `gains[].title` | 20 |
+   | `gains[].note` | 32 |
+   | `who` | 60 |
+   | `warn` | 80 |
+   個数の上限: `changes` 1〜3行、`gains` 0〜2個。`overview` 以外の図（M8 の `figures`）は持たない
+6. **配色**: ライトモードは A（生成り地に黒、流れ図の点は黒）、ダークモードは C（黒地、流れ図の点は金）。色は灰色系と金1色だけ。行頭に矢印などの記号を置かない（つなぎは線で描く）
+7. **過去の stories.json も描ける。** `overview` が無いハイライトは M8（`figures`）または旧形式（`before`/`after`/`stats`）として従来どおり描く
+8. 日本語は §4.4 と同じく yomiyasu で推敲する（SKILL.md 4.9）
+
 ## 5. データモデル（SQLite、D1互換DDL）
 
 ```sql
@@ -274,10 +310,13 @@ itemの**有効判定**は「`decided_at` が最新のイベントのverdict。�
   ],
   "cloudflare_watch": {
     "highlights": [{"title": "原題", "url": "…", "product": "Durable Objects", "kind": "agent|platform|pricing|security",
-                    "headline": "日本語見出し", "essence": "任意・本質1〜2文",
-                    "figures": [{"type": "flow|sequence|layers|compare|timeline|split|stats", "caption": "任意", "…": "§4.9 の形"}],
-                    "warn": "任意", "use": ["…"]}],
-                    // 旧形式(〜2026-10-08): figures の代わりに before/after/stats を直に持つ。描画は引き続き対応
+                    "headline": "結論1文(40字まで)", "essence": "補足1〜2文(90字まで)",
+                    "overview": {"type": "flow|sequence|layers|compare|timeline|split|stats", "caption": "任意", "…": "§4.9 の形。flow だけは steps:[{label,note?}] 2〜7段"},
+                    "before_overview": {"…": "任意。overview と同じ type で旧い状態"},
+                    "changes": [{"label": "調べ方", "before": "これまで", "after": "これから"}],
+                    "gains": [{"title": "どう良くなるか", "note": "任意"}],
+                    "warn": "任意", "who": "任意・誰に関係するか1行"}],
+                    // M8(2026-10-09〜10): overview の代わりに figures(1〜3個)と use を持つ。旧形式(〜2026-10-08): before/after/stats。どちらも描画は引き続き対応
     "blog":      [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}],
     "changelog": [{"title": "原題", "url": "…", "published_at": "ISO8601", "summary": "日本語1〜2文(任意)"}]
   },
