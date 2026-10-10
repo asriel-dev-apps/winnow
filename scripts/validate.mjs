@@ -51,6 +51,63 @@ const FIGURE_CHECKS = {
     ? [] : ['items must be 2-3 [{value, label}]']),
 };
 
+// 全体図(overview)の形。flow だけは before/after でなく steps 2〜7段
+const OVERVIEW_CHECKS = {
+  ...FIGURE_CHECKS,
+  flow: (f) => (count(f.steps, 2, 7) && f.steps.every((s) => nonEmpty(s?.label)) ? [] : ['steps must be 2-7 [{label, note?}]']),
+};
+const chars = (s) => [...String(s ?? '')].length;
+const tooLong = (path, value, max) => (typeof value === 'string' && chars(value) > max ? [`${path} must be at most ${max} chars (got ${chars(value)})`] : []);
+const LABEL_MAX = 16;
+const NOTE_MAX = 24;
+// 図の中の label/items/actors/columns は16字、note/caption は24字(コードポイント数)
+function figureLengths(value, path) {
+  if (Array.isArray(value)) return value.flatMap((v, i) => figureLengths(v, `${path}[${i}]`));
+  if (!value || typeof value !== 'object') return [];
+  return Object.entries(value).flatMap(([key, v]) => {
+    const p = `${path}.${key}`;
+    if (key === 'label') return tooLong(p, v, LABEL_MAX);
+    if (key === 'note' || key === 'caption') return tooLong(p, v, NOTE_MAX);
+    if (['items', 'actors', 'columns'].includes(key) && Array.isArray(v)) {
+      return v.flatMap((x, i) => (typeof x === 'string' ? tooLong(`${p}[${i}]`, x, LABEL_MAX) : figureLengths(x, `${p}[${i}]`)));
+    }
+    return typeof v === 'object' ? figureLengths(v, p) : [];
+  });
+}
+function overviewProblems(f, path) {
+  const check = Object.hasOwn(OVERVIEW_CHECKS, f?.type) ? OVERVIEW_CHECKS[f.type] : null;
+  if (!check) return [`${path}: unknown type (flow|sequence|layers|compare|timeline|split|stats)`];
+  const problems = check(f);
+  if (f.caption !== undefined && !nonEmpty(f.caption)) problems.push('caption must be a non-empty string');
+  return [...problems.map((p) => `${path} (${f.type}): ${p}`), ...figureLengths(f, path)];
+}
+function m9Problems(h) {
+  const problems = [];
+  if (Object.hasOwn(h, 'figures')) problems.push('overview and figures cannot both be present');
+  problems.push(...tooLong('headline', h.headline, 40), ...tooLong('essence', h.essence, 90), ...tooLong('who', h.who, 60), ...tooLong('warn', h.warn, 80));
+  problems.push(...overviewProblems(h.overview, 'overview'));
+  if (Object.hasOwn(h, 'before_overview')) {
+    if (h.before_overview?.type !== h.overview?.type) problems.push(`before_overview type "${h.before_overview?.type}" must match overview type "${h.overview?.type}"`);
+    else problems.push(...overviewProblems(h.before_overview, 'before_overview'));
+  }
+  if (Object.hasOwn(h, 'changes')) {
+    if (!count(h.changes, 1, 3)) problems.push('changes must have 1-3 rows');
+    else h.changes.forEach((c, i) => {
+      for (const [key, max] of [['label', 12], ['before', 28], ['after', 28]]) {
+        problems.push(...(nonEmpty(c?.[key]) ? tooLong(`changes[${i}].${key}`, c[key], max) : [`changes[${i}].${key} must be non-empty`]));
+      }
+    });
+  }
+  if (Object.hasOwn(h, 'gains')) {
+    if (!count(h.gains, 0, 2)) problems.push('gains must have 0-2 entries');
+    else h.gains.forEach((g, i) => {
+      problems.push(...(nonEmpty(g?.title) ? tooLong(`gains[${i}].title`, g.title, 20) : [`gains[${i}].title must be non-empty`]));
+      problems.push(...tooLong(`gains[${i}].note`, g?.note, 32));
+    });
+  }
+  return problems;
+}
+
 try {
   const file = process.argv[2];
   if (!file) throw new Error('usage: validate.mjs <stories.json>');
@@ -124,6 +181,10 @@ try {
           for (const h of entries) {
             for (const key of ['title', 'url', 'headline']) if (!nonEmpty(h?.[key])) errors.push(violation('cloudflare_watch', `highlight ${key} must be non-empty`));
             if (!['agent', 'platform', 'pricing', 'security'].includes(h?.kind)) errors.push(violation('cloudflare_watch', `highlight kind must be agent|platform|pricing|security: ${h?.headline}`));
+            if (Object.hasOwn(h ?? {}, 'overview')) {
+              for (const p of m9Problems(h)) errors.push(violation('cloudflare_watch', `highlight ${p}: ${h?.headline}`));
+              continue;
+            }
             if (Object.hasOwn(h ?? {}, 'figures')) {
               if (!Array.isArray(h.figures) || h.figures.length < 1 || h.figures.length > 3) errors.push(violation('cloudflare_watch', `highlight figures must have 1-3 entries: ${h?.headline}`));
               else h.figures.forEach((f, i) => {

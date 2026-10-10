@@ -169,7 +169,7 @@ fi
 cf_case() {
   local name="$1" expect="$2" filter="$3" pattern="${4:-}"
   local file="$tmpdir/cf-${name}.json"
-  if ! jq "$filter" fixtures/stories.cloudflare.json >"$file" 2>"$tmpdir/cf-${name}.err"; then
+  if ! jq "$filter" "${cf_fixture:-fixtures/stories.cloudflare.json}" >"$file" 2>"$tmpdir/cf-${name}.err"; then
     fail "cf_${name}" "jq: $(cat "$tmpdir/cf-${name}.err")"
     return
   fi
@@ -201,6 +201,46 @@ cf_case stats_4_items fail '.cloudflare_watch.highlights[0].figures[1].items += 
 cf_case figures_4 fail '.cloudflare_watch.highlights[2].figures += .cloudflare_watch.highlights[2].figures' 'highlight figures must have 1-3 entries'
 cf_case figures_none fail '.cloudflare_watch.highlights[3].figures = []' 'highlight figures must have 1-3 entries'
 cf_case no_figure_no_legacy fail '.cloudflare_watch.highlights[3] |= del(.figures)' 'highlight needs figures (or legacy before/after/stats)'
+
+# overview カード。fixtures/stories.cloudflare-m9.json の [0] は flow、[1] は before_overview つき layers、[2] は compare
+cf_fixture=fixtures/stories.cloudflare-m9.json
+h0='.cloudflare_watch.highlights[0]'
+# 文字数はコードポイントで数える。𠮷 は UTF-16 では2単位なので、.length で数えると41字になって落ちる
+cf_case m9_fixture pass '.'
+cf_case m9_at_limits pass "${h0} |= (.headline = (\"あ\" * 39 + \"𠮷\") | .essence = \"い\" * 90 | .overview.steps[0].label = \"う\" * 16 | .overview.steps[1].note = \"え\" * 24 | .changes[0].label = \"お\" * 12 | .changes[0].before = \"か\" * 28 | .gains[0].title = \"き\" * 20 | .gains[0].note = \"く\" * 32 | .who = \"け\" * 60 | .warn = \"こ\" * 80)"
+cf_case m9_pair_only pass '.cloudflare_watch.highlights |= [.[1]]'
+cf_case m9_minimal pass "${h0} |= del(.changes, .gains, .warn, .who, .essence)"
+cf_case m9_headline_41 fail "${h0}.headline = \"あ\" * 41" 'highlight headline must be at most 40 chars (got 41)'
+cf_case m9_essence_91 fail "${h0}.essence = \"あ\" * 91" 'highlight essence must be at most 90 chars (got 91)'
+cf_case m9_change_before_29 fail "${h0}.changes[0].before = \"あ\" * 29" 'highlight changes[0].before must be at most 28 chars (got 29)'
+cf_case m9_gain_title_21 fail "${h0}.gains[0].title = \"あ\" * 21" 'highlight gains[0].title must be at most 20 chars (got 21)'
+cf_case m9_who_61 fail "${h0}.who = \"あ\" * 61" 'highlight who must be at most 60 chars (got 61)'
+cf_case m9_warn_81 fail "${h0}.warn = \"あ\" * 81" 'highlight warn must be at most 80 chars (got 81)'
+cf_case m9_step_label_17 fail "${h0}.overview.steps[0].label = \"あ\" * 17" 'highlight overview.steps[0].label must be at most 16 chars (got 17)'
+cf_case m9_changes_4 fail "${h0}.changes += [${h0}.changes[0]]" 'highlight changes must have 1-3 rows'
+cf_case m9_changes_0 fail "${h0}.changes = []" 'highlight changes must have 1-3 rows'
+cf_case m9_gains_3 fail "${h0}.gains += [${h0}.gains[0]]" 'highlight gains must have 0-2 entries'
+cf_case m9_unknown_type fail "${h0}.overview.type = \"chart\"" 'highlight overview: unknown type'
+cf_case m9_flow_1step fail "${h0}.overview.steps |= .[:1]" 'highlight overview (flow): steps must be 2-7'
+cf_case m9_flow_8steps fail "${h0}.overview.steps += [${h0}.overview.steps[0]]" 'highlight overview (flow): steps must be 2-7'
+cf_case m9_before_type fail '.cloudflare_watch.highlights[1].before_overview.type = "split"' 'highlight before_overview type \"split\" must match overview type \"layers\"'
+cf_case m9_with_figures fail "${h0}.figures = [{\"type\":\"stats\",\"items\":[{\"value\":\"4\",\"label\":\"専門 AI\"},{\"value\":\"7\",\"label\":\"段\"}]}]" 'highlight overview and figures cannot both be present'
+unset cf_fixture
+
+if node scripts/render.mjs fixtures/stories.cloudflare-m9.json --out "$tmpdir/m9-render" >"$tmpdir/m9-render.out" 2>"$tmpdir/m9-render.err" &&
+  [[ "$(grep -o 'class="cfCard cfCard9"' "$tmpdir/m9-render/report.html" | wc -l | tr -d ' ')" == 3 ]] &&
+  grep -q 'class="cfTop side"' "$tmpdir/m9-render/report.html" &&
+  grep -q '<ol class="cfLine"><li><b>アラート</b></li><li><b>証拠を集める</b><small>決まった手順のコード</small></li>' "$tmpdir/m9-render/report.html" &&
+  grep -q '<p class="cfPairHead now">これから</p>' "$tmpdir/m9-render/report.html" &&
+  grep -q '<span class="cfWho"><span>対象</span>WAF・DDoS 防御の利用企業' "$tmpdir/m9-render/report.html" &&
+  grep -qF -- '- 2. 証拠を集める(決まった手順のコード)' "$tmpdir/m9-render/report.md" &&
+  grep -qF -- '- 調べ方: これまで 1つの AI がその場で全部調べる / これから コードが先に証拠を固める' "$tmpdir/m9-render/report.md" &&
+  grep -qF -- '- これから' "$tmpdir/m9-render/report.md" &&
+  grep -A1 -F -- '- 対象: WAF・DDoS 防御の利用企業（早期ベータ、営業経由）' "$tmpdir/m9-render/report.md" | grep -qF -- '- 出典: [Building an evidence-grounded agentic security operations harness on Cloudflare](https://blog.cloudflare.com/agentic-security-operations/)' "$tmpdir/m9-render/report.md"; then
+  pass "cf_m9_render"
+else
+  fail "cf_m9_render" "$(cat "$tmpdir/m9-render.err") overview card HTML or markdown missing"
+fi
 
 cat >"$tmpdir/raw-release.json" <<'JSON'
 [

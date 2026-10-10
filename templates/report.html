@@ -160,8 +160,9 @@
     .cfPicks a { display:inline-flex; align-items:center; gap:8px; padding:6px 12px 6px 6px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); text-decoration:none; font-size:13px; line-height:1.4; }
     .cfPicks a:hover { border-color:var(--gold); }
     .cfPicks .cfKind { margin:0; width:22px; height:22px; padding:0; display:inline-grid; place-items:center; font-family:var(--mono); }
-    .cfCards { display:grid; gap:14px; margin-top:12px; }
-    .cfCard { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px 14px; box-shadow:0 1px 2px var(--ring); scroll-margin-top:110px; }
+    /* 見出しの cf.llm.prompt... のような切れ目のない識別子でカードが画面幅を超えないよう、列を縮められるようにし途中で折り返す */
+    .cfCards { display:grid; grid-template-columns:minmax(0, 1fr); gap:14px; margin-top:12px; }
+    .cfCard { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px 14px; box-shadow:0 1px 2px var(--ring); scroll-margin-top:110px; overflow-wrap:anywhere; }
     .cfEyebrow { margin:0; font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--muted); }
     .cfKind { display:inline-block; margin-right:8px; padding:1px 9px; border-radius:999px; font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:0; }
     .cf-agent { background:color-mix(in srgb, #7a5cd6 14%, transparent); color:color-mix(in srgb, #7a5cd6 80%, var(--ink)); }
@@ -242,6 +243,46 @@
     .cfSrc { font-size:12.5px; color:var(--link); }
     .cfRest { margin-top:16px; }
     .cfRest .watchRepo { margin-top:12px; }
+    /* overview カード: 結論 → 全体図 → これまで/これから → どう良くなるか → 足元。色は灰色系と金だけ */
+    .cfCard9 { padding:22px 24px 14px; }
+    .cfCard9 .cfKind { background:color-mix(in srgb, var(--ink) 7%, transparent); color:var(--ink-2); }
+    .cfCard9 .cfHeadline { margin:6px 0 8px; font-size:22px; line-height:1.45; font-weight:800; }
+    .cfCard9 .cfEssence { margin:0; font-size:13.5px; line-height:1.8; }
+    .cfTop { display:grid; gap:14px; }
+    .cfTop.side { grid-template-columns:minmax(0, 1fr) minmax(0, 1.1fr); gap:28px; align-items:start; }
+    .cfTop .cfFig { margin:0; }
+    .cfTop.side .cfLayer, .cfPair .cfLayer { grid-template-columns:minmax(0, 1fr); gap:4px; }
+    .cfTop.side .cfStats, .cfTop.side .cfSplit, .cfPair .cfStats, .cfPair .cfSplit { grid-template-columns:minmax(0, 1fr); }
+    .cfTop.side .cfTimeline, .cfPair .cfTimeline { display:block; margin-left:5px; border-left:2px solid var(--line); }
+    .cfTop.side .cfTimeline li, .cfPair .cfTimeline li { padding:0 0 12px 16px; border-top:0; }
+    .cfTop.side .cfTimeline li::before, .cfPair .cfTimeline li::before { top:6px; left:-7px; }
+    /* 全体図の flow: 縦の線に点。線は各段の点から次の段の点まで(段の高さ + 段の間隔 8px) */
+    .cfLine { margin:0; padding:0 0 0 24px; list-style:none; display:grid; gap:8px; }
+    .cfLine li { position:relative; padding:7px 11px; border-radius:8px; background:color-mix(in srgb, var(--ink) 4%, transparent); font-size:13px; line-height:1.5; }
+    .cfLine li::before { content:""; position:absolute; z-index:1; left:-24px; top:12px; width:12px; height:12px; border-radius:50%; background:var(--ink); }
+    .cfLine li:not(:last-child)::after { content:""; position:absolute; left:-18.75px; top:18px; width:1.5px; height:calc(100% + 8px); background:color-mix(in srgb, var(--ink) 28%, transparent); }
+    .cfLine b, .cfLine small { display:block; }
+    .cfLine small { color:var(--ink-2); font-size:11.5px; }
+    .cfPair { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:20px; }
+    .cfPairHead { margin:0 0 6px; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--muted); }
+    .cfPairHead.now { color:var(--gold-text); }
+    .cfChanges { margin-top:18px; }
+    .cfChanges thead th { color:var(--muted); border-bottom-color:var(--ink); }
+    .cfChanges thead th:last-child { color:var(--gold-text); }
+    .cfChanges tbody th { width:8em; font-weight:500; color:var(--ink-2); }
+    .cfChanges td { color:var(--muted); }
+    .cfChanges td:last-child { color:var(--ink); font-weight:700; }
+    .cfGains { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:10px; margin-top:16px; }
+    .cfGains div { padding:12px 14px; border-radius:10px; background:color-mix(in srgb, var(--ink) 4%, transparent); }
+    .cfGains b { display:block; font-size:15px; line-height:1.45; }
+    .cfGains span { display:block; margin-top:2px; font-size:12.5px; line-height:1.6; color:var(--ink-2); }
+    .cfFoot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 16px; margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-size:12.5px; line-height:1.6; color:var(--ink-2); }
+    .cfWho > span { margin-right:8px; font-family:var(--mono); font-size:11px; color:var(--muted); }
+    .cfFoot .cfSrc { color:var(--muted); overflow-wrap:anywhere; }
+    @media (prefers-color-scheme: dark) {
+      .cfLine li::before { background:var(--gold); }
+      .cfLine li:not(:last-child)::after { background:#4a4a46; }
+    }
 
     @media (max-width:520px) {
       body { font-size:15px; }
@@ -279,6 +320,12 @@
       .cfTimeline li { padding:0 0 12px 16px; border-top:0; }
       .cfTimeline li::before { top:6px; left:-7px; }
       .cfSplit { grid-template-columns:minmax(0, 1fr); }
+      .cfCard9 { padding:18px 14px 12px; }
+      .cfCard9 .cfHeadline { font-size:19px; }
+      .cfTop.side, .cfPair { grid-template-columns:minmax(0, 1fr); gap:14px; }
+      .cfChanges tbody th { width:auto; color:var(--ink); font-weight:700; }
+      .cfChanges td { grid-template-columns:4.5em minmax(0, 1fr); }
+      .cfChanges td:first-of-type::before { color:var(--muted); }
     }
   </style>
 </head>

@@ -1,0 +1,365 @@
+{
+  "run_id": 0,
+  "date": "2026-07-07",
+  "generated_at": "2026-07-07T03:00:00.000Z",
+  "macro_summary": [
+    "coding agentの実行基盤と観測性が主要テーマでした。",
+    "MCPと永続状態の設計が複数ソースで重なっています。",
+    "Cloudflare D1やRust TUIなど実装寄りの記事が候補に残りました。"
+  ],
+  "stories": [
+    {
+      "cluster_id": "s01",
+      "translated_title": "coding agent実行基盤、MCP観測性まで実装論が具体化",
+      "match_score": 86,
+      "quality_score": 90,
+      "composite_score": 87,
+      "is_serendipity": false,
+      "topics": [
+        "coding agent",
+        "mcp",
+        "observability"
+      ],
+      "summary": "coding agentの実行基盤をどう分割するかが具体的に議論されています。MCPサーバーの観測性まで含めて、運用時に必要な境界が見えます。",
+      "selection_reason": "重点領域のcoding agentとMCPに直接関係し、複数ソースで重複観測されたため。",
+      "sections": {
+        "discussion": "HNでは実行ログの粒度と安全なツール権限が主な論点でした。",
+        "perspectives": "小さなプロセス分割はデバッグしやすい一方、状態共有と権限設計が複雑になります。",
+        "quick_questions": [
+          {
+            "q": "MCPの観測性で最初に見るべきものは何ですか。",
+            "a": "ツール呼び出し、失敗理由、入力サイズ、レイテンシです。"
+          },
+          {
+            "q": "ローカル実行とリモート実行の差は何ですか。",
+            "a": "権限境界と永続化の責任が大きく変わります。"
+          }
+        ],
+        "did_you_know": "MCPはツール提供側と利用側の境界を明示するため、監査ログとの相性が良い設計です。"
+      },
+      "items": [
+        {
+          "id": "ITEM_AGENT_RUNTIME",
+          "url": "https://example.com/agent-runtime?a=1&b=2",
+          "title": "A practical runtime for coding agents",
+          "source": "hn",
+          "engagement": {
+            "points": 120,
+            "comments": 34,
+            "hn_object_id": "1001"
+          },
+          "published_at": "2026-07-07T00:00:00Z"
+        },
+        {
+          "id": "ITEM_MCP_OBSERVABILITY",
+          "url": "https://example.com/mcp-observability",
+          "title": "Observability patterns for MCP servers",
+          "source": "hn",
+          "engagement": {
+            "points": 80,
+            "comments": 12,
+            "hn_object_id": "1002"
+          },
+          "published_at": "2026-07-06T13:00:00Z"
+        }
+      ]
+    },
+    {
+      "cluster_id": "s02",
+      "translated_title": "Cloudflare D1でagent状態を扱う実装パターン",
+      "match_score": 78,
+      "quality_score": 65,
+      "composite_score": 74,
+      "is_serendipity": false,
+      "topics": [
+        "cloudflare",
+        "d1",
+        "agent state"
+      ],
+      "summary": "Cloudflare D1を使ってagentの状態を保存する構成が紹介されています。軽量なSQLite互換ストアを前提に、ローカルからWorkersへの移行もしやすくなります。",
+      "selection_reason": "Cloudflare Workers / D1の関心領域とagent状態管理が交差するため。",
+      "sections": {},
+      "items": [
+        {
+          "id": "ITEM_D1",
+          "url": "https://example.com/cloudflare-d1-agents",
+          "title": "Cloudflare D1でagentの状態を扱う",
+          "source": "zenn",
+          "engagement": {},
+          "published_at": "2026-07-06T10:00:00Z"
+        }
+      ]
+    }
+  ],
+  "release_watch": [
+    {
+      "repo": "anthropics/claude-code",
+      "releases": [
+        {
+          "tag": "v2.1.202",
+          "url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.202",
+          "published_at": "2026-07-07T04:00:00Z",
+          "notes_summary": "CLIの安定性改善とエージェント実行時のログが更新されています。"
+        }
+      ]
+    },
+    {
+      "repo": "openai/codex",
+      "releases": [
+        {
+          "tag": "v0.18.0",
+          "url": "https://github.com/openai/codex/releases/tag/v0.18.0",
+          "published_at": "2026-07-07T02:00:00Z",
+          "notes_summary": "ローカル実行フローとツール呼び出しの扱いが改善されています。"
+        }
+      ]
+    }
+  ],
+  "cloudflare_watch": {
+    "highlights": [
+      {
+        "title": "Building an evidence-grounded agentic security operations harness on Cloudflare",
+        "url": "https://blog.cloudflare.com/agentic-security-operations/",
+        "product": "Cloudflare Managed Defense",
+        "kind": "security",
+        "headline": "証拠集めはコード、判断は専門 AI。アラート調査を分けて自動化する",
+        "essence": "決まった手順のコードが先に証拠を固め、専門 AI 4つが分担して分析する。結論は検証済みの証拠を引用した助言として人に届く。",
+        "overview": {
+          "type": "flow",
+          "steps": [
+            {
+              "label": "アラート"
+            },
+            {
+              "label": "証拠を集める",
+              "note": "決まった手順のコード"
+            },
+            {
+              "label": "Clef で選別",
+              "note": "誤検知らしければ省く"
+            },
+            {
+              "label": "専門 AI 4つ",
+              "note": "通信・顧客履歴・全体観測・脅威情報"
+            },
+            {
+              "label": "引用を検証",
+              "note": "証拠にあるかをコードで確かめる"
+            },
+            {
+              "label": "Clef で採点",
+              "note": "証拠が足りるか・分類"
+            },
+            {
+              "label": "人が判断"
+            }
+          ]
+        },
+        "changes": [
+          {
+            "label": "調べ方",
+            "before": "1つの AI がその場で全部調べる",
+            "after": "コードが先に証拠を固める"
+          },
+          {
+            "label": "分析",
+            "before": "1つのプロンプトに全部入れる",
+            "after": "専門 AI 4つが分担する"
+          },
+          {
+            "label": "調べられなかった情報",
+            "before": "失敗したことが見えない",
+            "after": "「未確認」と記録する"
+          }
+        ],
+        "gains": [
+          {
+            "title": "根拠のない結論が出にくい",
+            "note": "助言は検証済みの証拠を引用して届く"
+          },
+          {
+            "title": "調べ漏れが見える",
+            "note": "照会が時間切れでも「未確認」として残る"
+          }
+        ],
+        "who": "WAF・DDoS 防御の利用企業（早期ベータ、営業経由）"
+      },
+      {
+        "title": "Log Explorer - Query Log Explorer datasets from Observability Logs",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-07-log-search-in-observability-logs/",
+        "product": "Workers Observability / Log Explorer",
+        "kind": "platform",
+        "headline": "Workers のログも Log Explorer のログも1つの画面で調べる",
+        "essence": "Observability の Logs ページから Log Explorer のデータセットも検索できるようになった。絞り込みと SQL が共通になる。",
+        "before_overview": {
+          "type": "layers",
+          "layers": [
+            {
+              "label": "画面",
+              "items": [
+                "Workers Logs",
+                "Log Explorer"
+              ]
+            },
+            {
+              "label": "調べ方",
+              "items": [
+                "画面ごとに別々"
+              ]
+            },
+            {
+              "label": "保存先",
+              "items": [
+                "Observability",
+                "Log Explorer"
+              ]
+            }
+          ]
+        },
+        "overview": {
+          "type": "layers",
+          "caption": "上が利用者側",
+          "layers": [
+            {
+              "label": "画面",
+              "items": [
+                "Logs ページ"
+              ]
+            },
+            {
+              "label": "調べ方",
+              "items": [
+                "共通の絞り込み",
+                "SQL エディタ",
+                "保存済みクエリ"
+              ]
+            },
+            {
+              "label": "保存先",
+              "items": [
+                "Observability",
+                "Log Explorer"
+              ]
+            }
+          ]
+        },
+        "changes": [
+          {
+            "label": "画面",
+            "before": "ログの種類ごとに別の画面",
+            "after": "Logs ページ1つ"
+          },
+          {
+            "label": "クエリ",
+            "before": "画面ごとに書き直す",
+            "after": "同じ SQL で横断して調べる"
+          }
+        ],
+        "gains": [
+          {
+            "title": "原因を1画面で追える",
+            "note": "実行ログと HTTP ログを並べて見る"
+          }
+        ],
+        "who": "Workers と Log Explorer の両方でログを見ている人"
+      },
+      {
+        "title": "AI Gateway - Standardize provider credential error responses in AI Gateway",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-05-provider-credential-errors/",
+        "product": "AI Gateway",
+        "kind": "agent",
+        "headline": "提供元にキーを拒否されたら、どの提供元でも「401」が返る",
+        "essence": "提供元ごとにばらばらだった「キーが違う」の応答が1つにそろう。エラー処理の分岐が1本で済む。",
+        "overview": {
+          "type": "compare",
+          "caption": "キーが拒否されたときの応答",
+          "columns": [
+            "これまで",
+            "これから"
+          ],
+          "rows": [
+            {
+              "label": "HTTP ステータス",
+              "cells": [
+                "403 / 402 / 500(提供元で違う)",
+                "401"
+              ]
+            },
+            {
+              "label": "エラー番号",
+              "cells": [
+                "提供元の独自形式",
+                "2009"
+              ]
+            },
+            {
+              "label": "Vertex への再試行",
+              "cells": [
+                "500 として再試行する",
+                "再試行しない"
+              ]
+            }
+          ]
+        },
+        "warn": "403・402・500 でキーの誤りを判定しているコードは、401 を見るよう直す必要がある"
+      }
+    ],
+    "blog": [
+      {
+        "title": "Introducing Web Search API via AI Gateway",
+        "url": "https://blog.cloudflare.com/introducing-web-search-api/",
+        "published_at": "2026-10-02T13:00:00Z",
+        "summary": "AI GatewayからWeb検索APIを呼べるようになりました。"
+      },
+      {
+        "title": "Bridging technical depth and usability: The story behind Radar’s redesign",
+        "url": "https://blog.cloudflare.com/radar-redesign/",
+        "published_at": "2026-10-08T13:00:00Z",
+        "summary": "Cloudflare Radar の画面を作り直し、専門外の人も世界の通信状況を読めるようにした。"
+      }
+    ],
+    "changelog": [
+      {
+        "title": "AI Gateway - Standardize provider credential error responses in AI Gateway",
+        "url": "https://developers.cloudflare.com/changelog/post/2026-10-05-provider-credential-errors/",
+        "published_at": "2026-10-05T00:00:00Z"
+      }
+    ]
+  },
+  "oss_ranking": [
+    {
+      "rank": 1,
+      "repo": "addyosmani/agent-skills",
+      "url": "https://github.com/addyosmani/agent-skills",
+      "note": "coding agent向けskill集として注目されています。"
+    },
+    {
+      "rank": 2,
+      "repo": "modelcontextprotocol/servers",
+      "url": "https://github.com/modelcontextprotocol/servers",
+      "note": "MCP連携の実装例をまとめた基盤リポジトリです。"
+    }
+  ],
+  "oss_ranking_general": [
+    {
+      "rank": 1,
+      "repo": "pocketbase/pocketbase",
+      "url": "https://github.com/pocketbase/pocketbase",
+      "note": "1バイナリで動くGo製のバックエンドとして人気です。"
+    }
+  ],
+  "fetch_status": [
+    {
+      "source": "hn",
+      "ok": true,
+      "count": 3,
+      "note": "fixture"
+    },
+    {
+      "source": "zenn",
+      "ok": true,
+      "count": 3,
+      "note": "fixture"
+    }
+  ]
+}

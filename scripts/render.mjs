@@ -190,20 +190,52 @@ const CF_FIGURES = {
   stats: (f) => `<div class="cfStats">${list(f.items).map((s) => `<div><span class="v">${esc(s.value)}</span><span class="l">${esc(s.label)}</span></div>`).join('')}</div>`,
 };
 
-function cfFigureHtml(f) {
-  if (!Object.hasOwn(CF_FIGURES, f?.type)) return '';
-  const draw = CF_FIGURES[f.type];
+// 全体図(overview)の flow は steps を縦の線に点で並べる。新旧の色分けはしない
+const CF_OVERVIEW = {
+  ...CF_FIGURES,
+  flow: (f) => `<ol class="cfLine">${list(f.steps).map((s) => `<li><b>${esc(s.label)}</b>${s.note ? `<small>${esc(s.note)}</small>` : ''}</li>`).join('')}</ol>`,
+};
+
+function cfFigureHtml(f, draws = CF_FIGURES) {
+  if (!Object.hasOwn(draws, f?.type)) return '';
+  const draw = draws[f.type];
   return `<figure class="cfFig cfFig-${f.type}">${draw(f)}${f.caption ? `<figcaption>${esc(f.caption)}</figcaption>` : ''}</figure>`;
 }
 
+// PC で結論の右に置ける図。sequence・compare と2図比較は横幅が要るので結論の下に全幅で置く
+const CF_SIDE_TYPES = new Set(['flow', 'layers', 'timeline', 'split', 'stats']);
+
+function cfOverviewCardHtml(h, index) {
+  const kind = CLOUDFLARE_KINDS[h.kind] ? h.kind : 'platform';
+  const pair = Object.hasOwn(h, 'before_overview');
+  const side = !pair && CF_SIDE_TYPES.has(h.overview?.type);
+  const overview = pair
+    ? `<div class="cfPair"><div><p class="cfPairHead">これまで</p>${cfFigureHtml(h.before_overview, CF_OVERVIEW)}</div><div><p class="cfPairHead now">これから</p>${cfFigureHtml(h.overview, CF_OVERVIEW)}</div></div>`
+    : cfFigureHtml(h.overview, CF_OVERVIEW);
+  const changes = list(h.changes);
+  const gains = list(h.gains);
+  return `<article class="cfCard cfCard9" id="cf${index + 1}">
+      <p class="cfEyebrow"><span class="cfKind cf-${kind}">${esc(CLOUDFLARE_KINDS[kind])}</span>${esc(h.product || '')}</p>
+      <div class="cfTop${side ? ' side' : ''}">
+        <div class="cfLead"><h3 class="cfHeadline">${esc(h.headline)}</h3>${h.essence ? `<p class="cfEssence">${esc(h.essence)}</p>` : ''}</div>
+        ${overview}
+      </div>
+      ${changes.length ? `<table class="cfCompare cfChanges"><thead><tr><th></th><th scope="col">これまで</th><th scope="col">これから</th></tr></thead><tbody>${changes.map((c) => `<tr><th scope="row">${esc(c.label)}</th><td data-col="これまで">${esc(c.before)}</td><td data-col="これから">${esc(c.after)}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${gains.length ? `<div class="cfGains">${gains.map((g) => `<div><b>${esc(g.title)}</b>${g.note ? `<span>${esc(g.note)}</span>` : ''}</div>`).join('')}</div>` : ''}
+      ${h.warn ? `<p class="cfWarn">${esc(h.warn)}</p>` : ''}
+      <footer class="cfFoot">${h.who ? `<span class="cfWho"><span>対象</span>${esc(h.who)}</span>` : ''}<a class="cfSrc" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}</a></footer>
+    </article>`;
+}
+
 function cfHighlightHtml(h, index) {
+  if (Object.hasOwn(h, 'overview')) return cfOverviewCardHtml(h, index);
   const use = Array.isArray(h.use) ? h.use : [];
   const kind = CLOUDFLARE_KINDS[h.kind] ? h.kind : 'platform';
   return `<article class="cfCard" id="cf${index + 1}">
       <p class="cfEyebrow"><span class="cfKind cf-${kind}">${esc(CLOUDFLARE_KINDS[kind])}</span>${esc(h.product || '')}</p>
       <h3 class="cfHeadline">${esc(h.headline)}</h3>
       ${h.essence ? `<p class="cfEssence">${esc(h.essence)}</p>` : ''}
-      ${cfFigures(h).map(cfFigureHtml).join('')}
+      ${cfFigures(h).map((f) => cfFigureHtml(f)).join('')}
       ${h.warn ? `<p class="cfWarn">${esc(h.warn)}</p>` : ''}
       ${use.length ? `<ul class="cfUse">${use.map((u) => `<li>${esc(u)}</li>`).join('')}</ul>` : ''}
       <a class="cfSrc" href="${esc(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)} →</a>
@@ -285,6 +317,24 @@ const CF_FIGURES_MD = {
   split: (f) => ['left', 'right'].map((side) => `- ${line(f[side]?.label)}: ${list(f[side]?.items).map(line).join('、')}\n`).join(''),
   stats: (f) => list(f.items).map((s) => `- ${line(s.value)}: ${line(s.label)}\n`).join(''),
 };
+const CF_OVERVIEW_MD = {
+  ...CF_FIGURES_MD,
+  flow: (f) => list(f.steps).map((s, i) => `- ${i + 1}. ${line(s.label)}${s.note ? `(${line(s.note)})` : ''}\n`).join(''),
+};
+function cfFigureMd(f, draws, heading) {
+  if (!Object.hasOwn(draws, f?.type)) return '';
+  return `${heading ? `- ${heading}\n` : ''}${f.caption ? `- 図: ${line(f.caption)}\n` : ''}${draws[f.type](f)}`;
+}
+function cfOverviewMd(h) {
+  let out = Object.hasOwn(h, 'before_overview')
+    ? cfFigureMd(h.before_overview, CF_OVERVIEW_MD, 'これまで') + cfFigureMd(h.overview, CF_OVERVIEW_MD, 'これから')
+    : cfFigureMd(h.overview, CF_OVERVIEW_MD);
+  for (const c of list(h.changes)) out += `- ${line(c.label)}: これまで ${line(c.before)} / これから ${line(c.after)}\n`;
+  for (const g of list(h.gains)) out += `- 良くなる点: ${line(g.title)}${g.note ? `(${line(g.note)})` : ''}\n`;
+  if (h.warn) out += `- 注意: ${line(h.warn)}\n`;
+  if (h.who) out += `- 対象: ${line(h.who)}\n`;
+  return out;
+}
 
 let md = `# Winnow ${data.date || ''}\n\n`;
 md += `## 今回のサーベイを3行で\n\n`;
@@ -323,6 +373,11 @@ if (Array.isArray(data.release_watch) && data.release_watch.length) {
 if (cloudflareHighlights().length || CLOUDFLARE_GROUPS.some(([kind]) => cloudflareEntries(kind).length)) {
   md += `## CLOUDFLARE OFFICIAL\n\n`;
   for (const h of cloudflareHighlights()) {
+    if (Object.hasOwn(h, 'overview')) {
+      md += `### ${line(h.headline)}\n\n${h.product ? `${line(h.product)}\n\n` : ''}${h.essence ? `${line(h.essence)}\n\n` : ''}`;
+      md += `${cfOverviewMd(h)}- 出典: [${line(h.title)}](${h.url})\n\n`;
+      continue;
+    }
     md += `### ${line(h.headline)}\n\n[${line(h.title)}](${h.url})${h.product ? ` / ${line(h.product)}` : ''}\n\n`;
     if (h.essence) md += `${line(h.essence)}\n\n`;
     for (const f of cfFigures(h)) {
