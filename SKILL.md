@@ -171,8 +171,11 @@ validateが2回の修正後も失敗する場合は続行し、最終報告で�
 
 ```bash
 node scripts/serve.mjs &   # 既に稼働中なら自動で再利用される(多重起動しない)
-open http://127.0.0.1:${WINNOW_PORT:-8765}/YYYY-MM-DD/report.html
+open http://127.0.0.1:8765/YYYY-MM-DD/report.html
 ```
+
+- `serve.mjs` は Bash ツールの `run_in_background` で起動する（`&` はサンドボックスが拒否する）
+- `open` の URL はポートをリテラルで書く。`${WINNOW_PORT:-8765}` のような展開はサンドボックスが拒否する（WINNOW_PORT を変えているときだけ、その値を直接書く）
 
 ### 7. ユーザーへの報告
 
